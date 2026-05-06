@@ -9,10 +9,16 @@ const App = {
             return;
         }
 
-        // Tilapäinen — vaiheessa 2 tehdään oikeat näkymät
+        if (user.rooli === 'esihenkilo') {
+            ManagerView.render(container);
+            return;
+        }
+
+        // Tilapäinen — työntekijän näkymä tehdään seuraavassa tehtävässä
         container.innerHTML = `
             <h1>Tervetuloa, ${user.nimi}!</h1>
             <p>Roolisi: ${user.rooli}</p>
+            <p><em>Työntekijän näkymä tulossa…</em></p>
             <button id="logout">Kirjaudu ulos</button>
         `;
         document.getElementById('logout').addEventListener('click', () => {
