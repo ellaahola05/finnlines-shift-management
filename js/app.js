@@ -11,20 +11,9 @@ const App = {
 
         if (user.rooli === 'esihenkilo') {
             ManagerView.render(container);
-            return;
+        } else {
+            EmployeeView.render(container);
         }
-
-        // Tilapäinen — työntekijän näkymä tehdään seuraavassa tehtävässä
-        container.innerHTML = `
-            <h1>Tervetuloa, ${user.nimi}!</h1>
-            <p>Roolisi: ${user.rooli}</p>
-            <p><em>Työntekijän näkymä tulossa…</em></p>
-            <button id="logout">Kirjaudu ulos</button>
-        `;
-        document.getElementById('logout').addEventListener('click', () => {
-            Auth.logout();
-            App.render();
-        });
     },
 };
 
