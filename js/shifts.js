@@ -38,21 +38,61 @@ const Shifts = {
 
     // --- AUTOMAATTINEN LUONTI ---
 
-    luoViikko(viikonAlkuIso, poikkeuspaivat = []) {
+    luoKuukausi(vuosi, kuukausi, poikkeuspaivat = []) {
+        // kuukausi: 0-11 (JavaScript-tyyli)
+        const paiviaKuussa = new Date(vuosi, kuukausi + 1, 0).getDate();
         const paivat = [];
-        for (let i = 0; i < 7; i++) {
-            const d = new Date(viikonAlkuIso);
-            d.setDate(d.getDate() + i);
-            paivat.push(this.toIso(d));
+        for (let p = 1; p <= paiviaKuussa; p++) {
+            paivat.push(this.toIso(new Date(vuosi, kuukausi, p)));
         }
 
-        // Poista vanhat vuorot näiltä päiviltä ennen uusien luontia
+        // Poista vanhat vuorot tältä kuukaudelta ennen uusien luontia
         const ilman = this.kaikki().filter(v => !paivat.includes(v.paiva));
         this.tallenna(ilman);
 
         for (const paiva of paivat) {
             this.luoPaivanVuorot(paiva, poikkeuspaivat);
         }
+    },
+
+    // --- JULKAISU ---
+    // Kuukausi on joko 'luonnos' (oletus) tai 'julkaistu'.
+    // Tallennetaan lista julkaistuista kuukausista muodossa 'YYYY-MM'.
+
+    JULKAISTU_AVAIN: 'publishedMonths',
+
+    julkaistut() {
+        return Storage.load(this.JULKAISTU_AVAIN, []);
+    },
+
+    kuukausiAvain(vuosi, kuukausi) {
+        return `${vuosi}-${String(kuukausi + 1).padStart(2, '0')}`;
+    },
+
+    onJulkaistu(vuosi, kuukausi) {
+        return this.julkaistut().includes(this.kuukausiAvain(vuosi, kuukausi));
+    },
+
+    julkaise(vuosi, kuukausi) {
+        const avain = this.kuukausiAvain(vuosi, kuukausi);
+        const lista = this.julkaistut();
+        if (!lista.includes(avain)) {
+            lista.push(avain);
+            Storage.save(this.JULKAISTU_AVAIN, lista);
+        }
+    },
+
+    peruJulkaisu(vuosi, kuukausi) {
+        const avain = this.kuukausiAvain(vuosi, kuukausi);
+        Storage.save(this.JULKAISTU_AVAIN, this.julkaistut().filter(a => a !== avain));
+    },
+
+    // Palauttaa työntekijän vuorot vain julkaistuista kuukausista
+    julkaistutTyontekijalle(tyontekijaId) {
+        return this.tyontekijalle(tyontekijaId).filter(v => {
+            const [y, m] = v.paiva.split('-');
+            return this.onJulkaistu(parseInt(y, 10), parseInt(m, 10) - 1);
+        });
     },
 
     luoPaivanVuorot(paivaIso, poikkeuspaivat) {

@@ -2,7 +2,8 @@
 const EmployeeView = {
     render(container) {
         const user = Auth.getCurrentUser();
-        const omatVuorot = Shifts.tyontekijalle(user.id)
+        // Vain julkaistujen kuukausien vuorot näkyvät työntekijälle
+        const omatVuorot = Shifts.julkaistutTyontekijalle(user.id)
             .sort((a, b) => a.paiva.localeCompare(b.paiva));
 
         const vuoroHtml = omatVuorot.length
@@ -10,7 +11,7 @@ const EmployeeView = {
                 const t = VUOROTYYPIT[v.vuorotyyppi];
                 return `<li><strong>${this.muotoilePvm(v.paiva)}</strong> — ${t.alku}–${t.loppu}</li>`;
             }).join('')
-            : '<li class="tyhja">Ei tulevia vuoroja.</li>';
+            : '<li class="tyhja">Ei julkaistuja vuoroja vielä.</li>';
 
         container.innerHTML = `
             <header class="topbar">

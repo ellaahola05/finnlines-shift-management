@@ -51,50 +51,88 @@ body {
     align-items: center;
 }
 
-.viikko-nav {
+.kuukausi-nav {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin: 16px 0;
 }
 
-.viikko-grid {
+.toiminnot {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.status {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+.status-luonnos { background: #fff4e0; color: #b86200; }
+.status-julkaistu { background: #e0f4e0; color: #0a6b0a; }
+
+.kuukausi-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 4px;
+    gap: 2px;
+    background: #eee;
+    border: 1px solid #eee;
 }
 
-.paiva-sarake {
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    padding: 8px;
-    min-height: 150px;
-}
-
-.paiva-sarake h3 {
-    margin: 0 0 8px 0;
-    font-size: 13px;
+.paiva-otsikko {
+    background: #f5f5f5;
+    padding: 6px;
+    text-align: center;
+    font-weight: bold;
+    font-size: 12px;
     color: #555;
 }
 
-.paiva-sarake ul {
+.paiva-solu {
+    background: white;
+    min-height: 90px;
+    padding: 4px;
+    font-size: 11px;
+}
+
+.paiva-solu.eri-kuukausi {
+    background: #fafafa;
+    color: #ccc;
+}
+
+.paiva-solu.viikonloppu:not(.eri-kuukausi) {
+    background: #f8f8f8;
+}
+
+.paiva-numero {
+    font-weight: bold;
+    font-size: 12px;
+    margin-bottom: 2px;
+}
+
+.paiva-solu ul {
     list-style: none;
     padding: 0;
     margin: 0;
-    font-size: 12px;
 }
 
-.paiva-sarake li {
-    padding: 4px;
+.paiva-solu li {
+    padding: 1px 3px;
     background: #e8f0fe;
-    margin-bottom: 2px;
+    margin-bottom: 1px;
     border-radius: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.paiva-sarake li.tyhja {
-    background: none;
-    color: #999;
-    font-style: italic;
+.paiva-solu.eri-kuukausi li {
+    background: #f0f0f0;
 }
 
 .vuorolista {
@@ -105,4 +143,18 @@ body {
 .vuorolista li {
     padding: 12px;
     border-bottom: 1px solid #eee;
+}
+
+.ensisijainen {
+    background: #4285f4;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.ensisijainen:hover {
+    background: #3367d6;
 }
