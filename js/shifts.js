@@ -156,7 +156,9 @@ const Shifts = {
     valitseTasapuolisesti(ehdokkaat, maara, paivaIso) {
         // Älä valitse työntekijää, joka on jo paikalla tänä päivänä
         const tanaan = this.paivalle(paivaIso).map(v => v.tyontekijaId);
-        const vapaat = ehdokkaat.filter(t => !tanaan.includes(t.id));
+        const vapaat = ehdokkaat.filter(t =>
+            !tanaan.includes(t.id) && !Leave.onkoVapaalla(t.id, paivaIso)
+        );
 
         // Älä valitse, jos olisi 6+ peräkkäistä työpäivää
         const sopivat = vapaat.filter(t => !this.olisiLiikaaPerakkain(t.id, paivaIso));

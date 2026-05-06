@@ -135,6 +135,34 @@ body {
     background: #f0f0f0;
 }
 
+/* Työntekijän oma kalenteri — korostukset */
+.paiva-solu.oma-vuoro {
+    background: #d4e7ff;
+    border: 1px solid #4285f4;
+}
+
+.paiva-solu.loma-paiva {
+    background: #fff4d6;
+    border: 1px solid #f5b800;
+}
+
+.paiva-solu.sairas-paiva {
+    background: #ffe0e0;
+    border: 1px solid #ea4335;
+}
+
+.paiva-solu .merkki {
+    font-size: 11px;
+    margin-top: 2px;
+    font-weight: 500;
+}
+
+.paiva-solu.eri-kuukausi.oma-vuoro,
+.paiva-solu.eri-kuukausi.loma-paiva,
+.paiva-solu.eri-kuukausi.sairas-paiva {
+    opacity: 0.4;
+}
+
 .vuorolista {
     list-style: none;
     padding: 0;
@@ -194,3 +222,44 @@ body {
 .tila-odottaa { background: #fff4e0; color: #b86200; }
 .tila-hyvaksytty { background: #e0f4e0; color: #0a6b0a; }
 .tila-hylatty { background: #ffe0e0; color: #a30000; }
+
+.nav {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+button:hover {
+    background: #f0f0f0;
+}
+
+.ensisijainen:hover {
+    background: #3367d6;
+}
+
+.hyvaksy {
+    background: #34a853;
+    color: white;
+    border: none;
+    margin-left: 8px;
+}
+
+.hyvaksy:hover { background: #2d8e47; }
+
+.hylkaa {
+    background: #ea4335;
+    color: white;
+    border: none;
+    margin-left: 4px;
+}
+
+.hylkaa:hover { background: #c33a2c; }

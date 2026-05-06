@@ -1,13 +1,19 @@
-// Esihenkilön päänäkymä — kuukausikalenteri
+// Esihenkilön päänäkymä — kuukausikalenteri + lomapyynnöt
 const ManagerView = {
     nykyinenVuosi: null,
     nykyinenKuukausi: null, // 0-11
+    nykyinenNakyma: 'kalenteri', // 'kalenteri' | 'lomat'
 
     render(container) {
         if (this.nykyinenVuosi === null) {
             const tanaan = new Date();
             this.nykyinenVuosi = tanaan.getFullYear();
             this.nykyinenKuukausi = tanaan.getMonth();
+        }
+
+        if (this.nykyinenNakyma === 'lomat') {
+            this.renderLomat(container);
+            return;
         }
 
         const onJulkaistu = Shifts.onJulkaistu(this.nykyinenVuosi, this.nykyinenKuukausi);
@@ -20,11 +26,17 @@ const ManagerView = {
             : '<button id="julkaise" class="ensisijainen">📢 Julkaise</button>';
 
         const ruudukko = this.kuukausiRuudukkoHtml();
+        const odottavienMaara = Leave.odottavat().length;
+        const lomaNappi = `<button id="nakyma-lomat">Lomapyynnöt${odottavienMaara > 0 ? ` (${odottavienMaara})` : ''}</button>`;
 
         container.innerHTML = `
             <header class="topbar">
                 <h1>Esihenkilön näkymä</h1>
-                <button id="logout">Kirjaudu ulos</button>
+                <nav class="nav">
+                    <button id="nakyma-kalenteri" class="ensisijainen">Kalenteri</button>
+                    ${lomaNappi}
+                    <button id="logout">Kirjaudu ulos</button>
+                </nav>
             </header>
             <div class="kuukausi-nav">
                 <button id="edellinen">← Edellinen kuukausi</button>
@@ -48,10 +60,8 @@ const ManagerView = {
             </div>
         `;
 
-        document.getElementById('logout').addEventListener('click', () => {
-            Auth.logout();
-            App.render();
-        });
+        this.kiinnitaYhteisetTapahtumat(container);
+
         document.getElementById('edellinen').addEventListener('click', () => {
             this.siirry(-1);
             this.render(container);
@@ -82,6 +92,84 @@ const ManagerView = {
                 }
             });
         }
+    },
+
+    renderLomat(container) {
+        const odottavat = Leave.odottavat();
+        const kaikki = Leave.kaikki().sort((a,b) => b.luotu.localeCompare(a.luotu));
+
+        const odottavatHtml = odottavat.length
+            ? odottavat.map(l => {
+                const t = TYONTEKIJAT.find(x => x.id === l.tyontekijaId);
+                return `
+                    <li>
+                        <strong>${t?.nimi || '?'}</strong>
+                        ${this.muotoilePvm(l.alku)}${l.alku !== l.loppu ? ' – ' + this.muotoilePvm(l.loppu) : ''}
+                        <button data-id="${l.id}" class="hyvaksy">Hyväksy</button>
+                        <button data-id="${l.id}" class="hylkaa">Hylkää</button>
+                    </li>
+                `;
+            }).join('')
+            : '<li class="tyhja">Ei odottavia pyyntöjä.</li>';
+
+        const kaikkiHtml = kaikki.map(l => {
+            const t = TYONTEKIJAT.find(x => x.id === l.tyontekijaId);
+            return `
+                <li>
+                    <strong>${t?.nimi || '?'}</strong>
+                    (${l.tyyppi === 'loma' ? 'loma' : 'sairas'})
+                    ${this.muotoilePvm(l.alku)}${l.alku !== l.loppu ? ' – ' + this.muotoilePvm(l.loppu) : ''}
+                    <span class="tila tila-${l.tila}">${EmployeeView.tilanNimi(l.tila)}</span>
+                </li>
+            `;
+        }).join('');
+
+        container.innerHTML = `
+            <header class="topbar">
+                <h1>Lomapyynnöt</h1>
+                <nav class="nav">
+                    <button id="nakyma-kalenteri">Kalenteri</button>
+                    <button id="nakyma-lomat" class="ensisijainen">Lomapyynnöt</button>
+                    <button id="logout">Kirjaudu ulos</button>
+                </nav>
+            </header>
+
+            <h2>Odottavat pyynnöt</h2>
+            <ul class="lomalista">${odottavatHtml}</ul>
+
+            <h2>Kaikki pyynnöt ja sairauspoissaolot</h2>
+            <ul class="lomalista">${kaikkiHtml || '<li class="tyhja">Ei tietoja.</li>'}</ul>
+        `;
+
+        this.kiinnitaYhteisetTapahtumat(container);
+
+        container.querySelectorAll('.hyvaksy').forEach(btn => {
+            btn.addEventListener('click', () => {
+                Leave.paivita(parseInt(btn.dataset.id, 10), 'hyvaksytty');
+                this.render(container);
+            });
+        });
+        container.querySelectorAll('.hylkaa').forEach(btn => {
+            btn.addEventListener('click', () => {
+                Leave.paivita(parseInt(btn.dataset.id, 10), 'hylatty');
+                this.render(container);
+            });
+        });
+    },
+
+    kiinnitaYhteisetTapahtumat(container) {
+        document.getElementById('logout').addEventListener('click', () => {
+            Auth.logout();
+            App.render();
+        });
+        document.getElementById('nakyma-kalenteri').addEventListener('click', () => {
+            this.nykyinenNakyma = 'kalenteri';
+            this.render(container);
+        });
+        document.getElementById('nakyma-lomat').addEventListener('click', () => {
+            this.nykyinenNakyma = 'lomat';
+            this.render(container);
+        });
     },
 
     kuukausiRuudukkoHtml() {
@@ -138,6 +226,11 @@ const ManagerView = {
     kuukaudenNimi(kk) {
         return ['Tammikuu','Helmikuu','Maaliskuu','Huhtikuu','Toukokuu','Kesäkuu',
                 'Heinäkuu','Elokuu','Syyskuu','Lokakuu','Marraskuu','Joulukuu'][kk];
+    },
+
+    muotoilePvm(iso) {
+        const d = new Date(iso);
+        return `${d.getDate()}.${d.getMonth()+1}.${d.getFullYear()}`;
     },
 
     iso(d) {
