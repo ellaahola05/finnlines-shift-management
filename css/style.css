@@ -158,3 +158,39 @@ body {
 .ensisijainen:hover {
     background: #3367d6;
 }
+
+.loma-lomake {
+    display: flex;
+    gap: 12px;
+    align-items: end;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.loma-lomake label {
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+}
+
+.lomalista {
+    list-style: none;
+    padding: 0;
+}
+
+.lomalista li {
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+}
+
+.tila {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    margin-left: 8px;
+}
+
+.tila-odottaa { background: #fff4e0; color: #b86200; }
+.tila-hyvaksytty { background: #e0f4e0; color: #0a6b0a; }
+.tila-hylatty { background: #ffe0e0; color: #a30000; }
