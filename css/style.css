@@ -163,6 +163,11 @@ body {
     opacity: 0.4;
 }
 
+.paiva-solu.poikkeus {
+    background: #fff4e0;
+    border: 1px solid #ffb84d;
+}
+
 .vuorolista {
     list-style: none;
     padding: 0;

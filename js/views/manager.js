@@ -2,7 +2,7 @@
 const ManagerView = {
     nykyinenVuosi: null,
     nykyinenKuukausi: null, // 0-11
-    nykyinenNakyma: 'kalenteri', // 'kalenteri' | 'lomat'
+    nykyinenNakyma: 'kalenteri', // 'kalenteri' | 'lomat' | 'poikkeukset'
 
     render(container) {
         if (this.nykyinenVuosi === null) {
@@ -13,6 +13,10 @@ const ManagerView = {
 
         if (this.nykyinenNakyma === 'lomat') {
             this.renderLomat(container);
+            return;
+        }
+        if (this.nykyinenNakyma === 'poikkeukset') {
+            this.renderPoikkeukset(container);
             return;
         }
 
@@ -35,6 +39,7 @@ const ManagerView = {
                 <nav class="nav">
                     <button id="nakyma-kalenteri" class="ensisijainen">Kalenteri</button>
                     ${lomaNappi}
+                    <button id="nakyma-poikkeukset">Poikkeuspäivät</button>
                     <button id="logout">Kirjaudu ulos</button>
                 </nav>
             </header>
@@ -73,7 +78,7 @@ const ManagerView = {
         document.getElementById('luo-vuorot').addEventListener('click', () => {
             const teksti = `Luodaanko vuorot kuukaudelle ${this.kuukaudenNimi(this.nykyinenKuukausi)} ${this.nykyinenVuosi}? Olemassa olevat vuorot tältä kuukaudelta korvataan.`;
             if (confirm(teksti)) {
-                Shifts.luoKuukausi(this.nykyinenVuosi, this.nykyinenKuukausi);
+                Shifts.luoKuukausi(this.nykyinenVuosi, this.nykyinenKuukausi, Exceptions.paivat());
                 this.render(container);
             }
         });
@@ -130,6 +135,7 @@ const ManagerView = {
                 <nav class="nav">
                     <button id="nakyma-kalenteri">Kalenteri</button>
                     <button id="nakyma-lomat" class="ensisijainen">Lomapyynnöt</button>
+                    <button id="nakyma-poikkeukset">Poikkeuspäivät</button>
                     <button id="logout">Kirjaudu ulos</button>
                 </nav>
             </header>
@@ -170,6 +176,63 @@ const ManagerView = {
             this.nykyinenNakyma = 'lomat';
             this.render(container);
         });
+        document.getElementById('nakyma-poikkeukset').addEventListener('click', () => {
+            this.nykyinenNakyma = 'poikkeukset';
+            this.render(container);
+        });
+    },
+
+    renderPoikkeukset(container) {
+        const rivit = Exceptions.kaikki();
+        const rivitHtml = rivit.length
+            ? rivit.map(r => `
+                <li>
+                    <strong>${this.muotoilePvm(r.paiva)}</strong>
+                    — ${r.kuvaus}
+                    <button data-paiva="${r.paiva}" class="hylkaa poista">Poista</button>
+                </li>
+            `).join('')
+            : '<li class="tyhja">Ei poikkeuspäiviä.</li>';
+
+        container.innerHTML = `
+            <header class="topbar">
+                <h1>Poikkeuspäivät</h1>
+                <nav class="nav">
+                    <button id="nakyma-kalenteri">Kalenteri</button>
+                    <button id="nakyma-lomat">Lomapyynnöt</button>
+                    <button id="nakyma-poikkeukset" class="ensisijainen">Poikkeuspäivät</button>
+                    <button id="logout">Kirjaudu ulos</button>
+                </nav>
+            </header>
+
+            <p>Päivät joina laiva ei lähde — vuoroja ei luoda näille päiville.</p>
+
+            <form id="poikkeus-lomake" class="loma-lomake">
+                <label>Päivämäärä: <input type="date" id="poikkeus-paiva" required></label>
+                <label>Kuvaus: <input type="text" id="poikkeus-kuvaus" placeholder="esim. Joulupäivä" required></label>
+                <button type="submit" class="ensisijainen">Lisää</button>
+            </form>
+
+            <h2>Poikkeukset</h2>
+            <ul class="lomalista">${rivitHtml}</ul>
+        `;
+
+        this.kiinnitaYhteisetTapahtumat(container);
+
+        document.getElementById('poikkeus-lomake').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const paiva = document.getElementById('poikkeus-paiva').value;
+            const kuvaus = document.getElementById('poikkeus-kuvaus').value;
+            Exceptions.lisaa(paiva, kuvaus);
+            this.render(container);
+        });
+
+        container.querySelectorAll('.poista').forEach(btn => {
+            btn.addEventListener('click', () => {
+                Exceptions.poista(btn.dataset.paiva);
+                this.render(container);
+            });
+        });
     },
 
     kuukausiRuudukkoHtml() {
@@ -191,6 +254,7 @@ const ManagerView = {
         const iso = this.iso(d);
         const onTassaKuussa = d.getMonth() === this.nykyinenKuukausi;
         const onViikonloppu = d.getDay() === 0 || d.getDay() === 6;
+        const onPoikkeus = Exceptions.onkoPoikkeus(iso);
 
         const vuorot = Shifts.paivalle(iso);
         const vuoroHtml = vuorot.map(v => {
@@ -203,10 +267,13 @@ const ManagerView = {
         const luokat = ['paiva-solu'];
         if (!onTassaKuussa) luokat.push('eri-kuukausi');
         if (onViikonloppu) luokat.push('viikonloppu');
+        if (onPoikkeus) luokat.push('poikkeus');
+
+        const poikkeusMerkki = onPoikkeus ? ' ⚠️' : '';
 
         return `
             <div class="${luokat.join(' ')}">
-                <div class="paiva-numero">${d.getDate()}</div>
+                <div class="paiva-numero">${d.getDate()}${poikkeusMerkki}</div>
                 <ul>${vuoroHtml}</ul>
             </div>
         `;
