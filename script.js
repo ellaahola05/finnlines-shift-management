@@ -1,1 +1,0 @@
-// Finnlines Shift Management - JavaScript
