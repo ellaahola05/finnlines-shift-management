@@ -203,7 +203,7 @@ const EmployeeView = {
     roolinNimi(rooli) {
         return ({
             esihenkilo: 'Esihenkilö',
-            yksilomyynti: 'Yksilömyynti',
+            asiakaspalvelu: 'Asiakaspalvelu',
             ryhmamyynti: 'Ryhmämyynti',
             satamahenkilokunta: 'Satamahenkilökunta',
         })[rooli] || rooli;

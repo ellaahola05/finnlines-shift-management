@@ -390,6 +390,36 @@ button:active { transform: translateY(1px); }
 .tila-odottaa    { background: var(--gold-100); color: #7A5C00; }
 .tila-hyvaksytty { background: var(--success-bg); color: var(--success-fg); }
 .tila-hylatty    { background: var(--danger-bg); color: var(--danger-fg); }
+.tila-info       { background: var(--navy-100); color: var(--navy); }
+
+.lkm {
+    color: var(--gray-500);
+    font-weight: 400;
+    font-size: 0.9em;
+    margin-left: 4px;
+}
+
+.lukko {
+    color: var(--gray-500);
+    font-size: 14px;
+    margin-left: auto;
+}
+
+select {
+    font-family: inherit;
+    font-size: 14px;
+    padding: 9px 12px;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-sm);
+    background: var(--white);
+    color: var(--ink);
+    cursor: pointer;
+}
+select:focus {
+    outline: none;
+    border-color: var(--navy);
+    box-shadow: 0 0 0 3px var(--navy-100);
+}
 
 /* ===== Calendar grid ===== */
 .kuukausi-grid {

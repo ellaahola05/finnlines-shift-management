@@ -2,7 +2,7 @@
 const ManagerView = {
     nykyinenVuosi: null,
     nykyinenKuukausi: null, // 0-11
-    nykyinenNakyma: 'kalenteri', // 'kalenteri' | 'lomat' | 'poikkeukset'
+    nykyinenNakyma: 'kalenteri', // 'kalenteri' | 'lomat' | 'poikkeukset' | 'henkilosto'
 
     render(container) {
         if (this.nykyinenVuosi === null) {
@@ -17,6 +17,10 @@ const ManagerView = {
         }
         if (this.nykyinenNakyma === 'poikkeukset') {
             this.renderPoikkeukset(container);
+            return;
+        }
+        if (this.nykyinenNakyma === 'henkilosto') {
+            this.renderHenkilosto(container);
             return;
         }
 
@@ -44,6 +48,7 @@ const ManagerView = {
                     <button id="nakyma-kalenteri" class="ensisijainen">Kalenteri</button>
                     ${lomaNappi}
                     <button id="nakyma-poikkeukset">Poikkeuspäivät</button>
+                    <button id="nakyma-henkilosto">Henkilöstö</button>
                     <button id="logout">Kirjaudu ulos</button>
                 </nav>
             </header>
@@ -148,6 +153,7 @@ const ManagerView = {
                     <button id="nakyma-kalenteri">Kalenteri</button>
                     <button id="nakyma-lomat" class="ensisijainen">Lomapyynnöt</button>
                     <button id="nakyma-poikkeukset">Poikkeuspäivät</button>
+                    <button id="nakyma-henkilosto">Henkilöstö</button>
                     <button id="logout">Kirjaudu ulos</button>
                 </nav>
             </header>
@@ -196,6 +202,111 @@ const ManagerView = {
             this.nykyinenNakyma = 'poikkeukset';
             this.render(container);
         });
+        document.getElementById('nakyma-henkilosto').addEventListener('click', () => {
+            this.nykyinenNakyma = 'henkilosto';
+            this.render(container);
+        });
+    },
+
+    renderHenkilosto(container) {
+        // Ryhmittele työntekijät roolin mukaan
+        const ryhmat = [
+            { rooli: 'esihenkilo',          otsikko: 'Esihenkilö' },
+            { rooli: 'asiakaspalvelu',      otsikko: 'Asiakaspalvelu' },
+            { rooli: 'ryhmamyynti',         otsikko: 'Ryhmämyynti' },
+            { rooli: 'satamahenkilokunta',  otsikko: 'Satamahenkilökunta' },
+        ];
+
+        const ryhmatHtml = ryhmat.map(r => {
+            const tt = TYONTEKIJAT.filter(x => x.rooli === r.rooli);
+            const lukumaara = tt.length;
+            const liHtml = tt.length
+                ? tt.map(t => {
+                    const tyyppiNimi = t.tyyppi === 'kesatyontekija' ? 'Kesätyöntekijä' : 'Vakituinen';
+                    const poistoNappi = Employees.onkoEsihenkilo(t.id)
+                        ? '<span class="lukko" title="Esihenkilöä ei voi poistaa">🔒</span>'
+                        : `<button data-id="${t.id}" class="hylkaa poista-tt">Poista</button>`;
+                    return `
+                        <li>
+                            <strong>${t.nimi}</strong>
+                            <span class="tila tila-info">${tyyppiNimi}</span>
+                            ${poistoNappi}
+                        </li>
+                    `;
+                }).join('')
+                : '<li class="tyhja">Ei henkilöstöä tässä roolissa.</li>';
+
+            return `
+                <h2>${r.otsikko} <span class="lkm">(${lukumaara})</span></h2>
+                <ul class="lomalista">${liHtml}</ul>
+            `;
+        }).join('');
+
+        container.innerHTML = `
+            <header class="topbar">
+                <div class="brand">
+                    <img src="assets/finnlines-logo.svg" alt="Finnlines">
+                    <div class="brand-divider"></div>
+                    <span class="brand-app-name">Vuorohallinta</span>
+                </div>
+                <nav class="nav">
+                    <button id="nakyma-kalenteri">Kalenteri</button>
+                    <button id="nakyma-lomat">Lomapyynnöt</button>
+                    <button id="nakyma-poikkeukset">Poikkeuspäivät</button>
+                    <button id="nakyma-henkilosto" class="ensisijainen">Henkilöstö</button>
+                    <button id="logout">Kirjaudu ulos</button>
+                </nav>
+            </header>
+            <div class="page-header">
+                <h1>Henkilöstö</h1>
+                <p class="muted">Lisää tai poista työntekijöitä — yhteensä ${TYONTEKIJAT.length} henkilöä.</p>
+            </div>
+
+            <h2>Lisää uusi työntekijä</h2>
+            <form id="henkilosto-lomake" class="loma-lomake">
+                <label>Nimi: <input type="text" id="uusi-nimi" placeholder="Etunimi Sukunimi" required></label>
+                <label>Rooli:
+                    <select id="uusi-rooli" required>
+                        <option value="asiakaspalvelu">Asiakaspalvelu</option>
+                        <option value="ryhmamyynti">Ryhmämyynti</option>
+                        <option value="satamahenkilokunta">Satamahenkilökunta</option>
+                    </select>
+                </label>
+                <label>Tyyppi:
+                    <select id="uusi-tyyppi" required>
+                        <option value="vakituinen">Vakituinen</option>
+                        <option value="kesatyontekija">Kesätyöntekijä</option>
+                    </select>
+                </label>
+                <button type="submit" class="ensisijainen">Lisää</button>
+            </form>
+
+            ${ryhmatHtml}
+        `;
+
+        this.kiinnitaYhteisetTapahtumat(container);
+
+        document.getElementById('henkilosto-lomake').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const nimi = document.getElementById('uusi-nimi').value.trim();
+            const rooli = document.getElementById('uusi-rooli').value;
+            const tyyppi = document.getElementById('uusi-tyyppi').value;
+            if (!nimi) return;
+            Employees.lisaa(nimi, rooli, tyyppi);
+            this.render(container);
+        });
+
+        container.querySelectorAll('.poista-tt').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = parseInt(btn.dataset.id, 10);
+                const t = TYONTEKIJAT.find(x => x.id === id);
+                if (!t) return;
+                if (confirm(`Poistetaanko työntekijä ${t.nimi}? Tämä ei poista olemassa olevia vuoroja.`)) {
+                    Employees.poista(id);
+                    this.render(container);
+                }
+            });
+        });
     },
 
     renderPoikkeukset(container) {
@@ -221,6 +332,7 @@ const ManagerView = {
                     <button id="nakyma-kalenteri">Kalenteri</button>
                     <button id="nakyma-lomat">Lomapyynnöt</button>
                     <button id="nakyma-poikkeukset" class="ensisijainen">Poikkeuspäivät</button>
+                    <button id="nakyma-henkilosto">Henkilöstö</button>
                     <button id="logout">Kirjaudu ulos</button>
                 </nav>
             </header>

@@ -17,4 +17,7 @@ const App = {
     },
 };
 
-document.addEventListener('DOMContentLoaded', () => App.render());
+document.addEventListener('DOMContentLoaded', () => {
+    Employees.init();
+    App.render();
+});

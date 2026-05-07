@@ -31,7 +31,7 @@ const LoginView = {
     roolinNimi(rooli) {
         const nimet = {
             esihenkilo: 'Esihenkilö',
-            yksilomyynti: 'Yksilömyynti',
+            asiakaspalvelu: 'Asiakaspalvelu',
             ryhmamyynti: 'Ryhmämyynti',
             satamahenkilokunta: 'Satamahenkilökunta',
         };

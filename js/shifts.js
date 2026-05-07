@@ -121,8 +121,8 @@ const Shifts = {
         const ryhma = TYONTEKIJAT.filter(t => t.rooli === 'ryhmamyynti');
         ryhma.forEach(t => this.lisaa(paivaIso, t.id, 'ryhma'));
 
-        // 3. Yksilömyynti — sesonkiriippuvainen määrä
-        this.luoYksiloVuorot(paivaIso);
+        // 3. Asiakaspalvelu — sesonkiriippuvainen määrä
+        this.luoAsiakaspalveluVuorot(paivaIso);
 
         // 4. Lähtöselvitys arkisin
         this.luoLahtoselvitysVuorot(paivaIso, false);
@@ -187,18 +187,18 @@ const Shifts = {
             .filter(v => v.vuorotyyppi === 'satamavastaava').length;
     },
 
-    luoYksiloVuorot(paivaIso) {
+    luoAsiakaspalveluVuorot(paivaIso) {
         const kk = parseInt(paivaIso.substring(5,7), 10);
         const onKesa = SAANNOT.kesakuukaudet.includes(kk);
-        const tarvitaan = onKesa ? SAANNOT.kesaYksiloMin : SAANNOT.talviYksiloMin;
+        const tarvitaan = onKesa ? SAANNOT.kesaAsiakaspalveluMin : SAANNOT.talviAsiakaspalveluMin;
 
         const ehdokkaat = TYONTEKIJAT
-            .filter(t => t.rooli === 'yksilomyynti')
+            .filter(t => t.rooli === 'asiakaspalvelu')
             // Talvella vain vakituiset
             .filter(t => onKesa || t.tyyppi === 'vakituinen');
 
         const valitut = this.valitseTasapuolisesti(ehdokkaat, tarvitaan, paivaIso);
-        valitut.forEach(t => this.lisaa(paivaIso, t.id, 'yksilo_aamu'));
+        valitut.forEach(t => this.lisaa(paivaIso, t.id, 'asiakaspalvelu_aamu'));
     },
 
     luoLahtoselvitysVuorot(paivaIso, onViikonloppu) {
@@ -207,11 +207,11 @@ const Shifts = {
         const tarvitaan = onKesa ? SAANNOT.kesaLahtoselvitysMin : SAANNOT.talviLahtoselvitysMin;
 
         const ehdokkaat = TYONTEKIJAT
-            .filter(t => t.rooli === 'yksilomyynti')
+            .filter(t => t.rooli === 'asiakaspalvelu')
             .filter(t => onKesa || t.tyyppi === 'vakituinen');
 
         const valitut = this.valitseTasapuolisesti(ehdokkaat, tarvitaan, paivaIso);
-        const tyyppi = onViikonloppu ? 'yksilo_lahtoselvitys_vkl' : 'yksilo_lahtoselvitys_arki';
+        const tyyppi = onViikonloppu ? 'asiakaspalvelu_lahtoselvitys_vkl' : 'asiakaspalvelu_lahtoselvitys_arki';
         valitut.forEach(t => this.lisaa(paivaIso, t.id, tyyppi));
     },
 
