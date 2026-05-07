@@ -2,7 +2,7 @@
 const ManagerView = {
     nykyinenVuosi: null,
     nykyinenKuukausi: null, // 0-11
-    nykyinenNakyma: 'kalenteri', // 'kalenteri' | 'lomat' | 'poikkeukset' | 'henkilosto'
+    nykyinenNakyma: 'kalenteri', // 'kalenteri' | 'lomat' | 'toiveet' | 'poikkeukset' | 'henkilosto'
 
     render(container) {
         if (this.nykyinenVuosi === null) {
@@ -21,6 +21,10 @@ const ManagerView = {
         }
         if (this.nykyinenNakyma === 'henkilosto') {
             this.renderHenkilosto(container);
+            return;
+        }
+        if (this.nykyinenNakyma === 'toiveet') {
+            this.renderToiveet(container);
             return;
         }
 
@@ -47,6 +51,7 @@ const ManagerView = {
                 <nav class="nav">
                     <button id="nakyma-kalenteri" class="ensisijainen">Kalenteri</button>
                     ${lomaNappi}
+                    <button id="nakyma-toiveet">Toiveet${(() => { const n = Wishes.odottavat().length; return n > 0 ? ` (${n})` : ''; })()}</button>
                     <button id="nakyma-poikkeukset">Poikkeuspäivät</button>
                     <button id="nakyma-henkilosto">Henkilöstö</button>
                     <button id="logout">Kirjaudu ulos</button>
@@ -152,6 +157,7 @@ const ManagerView = {
                 <nav class="nav">
                     <button id="nakyma-kalenteri">Kalenteri</button>
                     <button id="nakyma-lomat" class="ensisijainen">Lomapyynnöt</button>
+                    <button id="nakyma-toiveet">Toiveet${(() => { const n = Wishes.odottavat().length; return n > 0 ? ` (${n})` : ''; })()}</button>
                     <button id="nakyma-poikkeukset">Poikkeuspäivät</button>
                     <button id="nakyma-henkilosto">Henkilöstö</button>
                     <button id="logout">Kirjaudu ulos</button>
@@ -206,6 +212,91 @@ const ManagerView = {
             this.nykyinenNakyma = 'henkilosto';
             this.render(container);
         });
+        document.getElementById('nakyma-toiveet').addEventListener('click', () => {
+            this.nykyinenNakyma = 'toiveet';
+            this.render(container);
+        });
+    },
+
+    renderToiveet(container) {
+        const odottavat = Wishes.odottavat();
+        const kaikki = Wishes.kaikki().sort((a, b) => b.luotu.localeCompare(a.luotu));
+
+        const toiveRivi = (w, naytaNapit) => {
+            const t = TYONTEKIJAT.find(x => x.id === w.tyontekijaId);
+            const ikoni = w.tyyppi === 'ei_kaytettavissa' ? '🔴' :
+                          w.tyyppi === 'toivoo_toita' ? '🟢' : '💬';
+            const tyyppiNimi = TOIVE_TYYPPI_NIMI[w.tyyppi] || w.tyyppi;
+            const kommentti = w.kommentti ? ` <em class="kommentti">"${w.kommentti}"</em>` : '';
+            const tilaMerkki = `<span class="tila tila-${w.tila}">${EmployeeView.tilanNimi(w.tila)}</span>`;
+            const napit = naytaNapit
+                ? `<button data-id="${w.id}" class="hyvaksy">Hyväksy</button>
+                   <button data-id="${w.id}" class="hylkaa">Hylkää</button>`
+                : '';
+            return `
+                <li>
+                    <span class="toive-ikoni">${ikoni}</span>
+                    <strong>${t?.nimi || '?'}</strong>
+                    <span class="toive-tyyppi">${tyyppiNimi}</span>
+                    ${this.muotoilePvm(w.alku)}${w.alku !== w.loppu ? ' – ' + this.muotoilePvm(w.loppu) : ''}
+                    ${kommentti}
+                    ${tilaMerkki}
+                    ${napit}
+                </li>
+            `;
+        };
+
+        const odottavatHtml = odottavat.length
+            ? odottavat.map(w => toiveRivi(w, true)).join('')
+            : '<li class="tyhja">Ei odottavia toiveita.</li>';
+
+        const kaikkiHtml = kaikki.length
+            ? kaikki.map(w => toiveRivi(w, false)).join('')
+            : '<li class="tyhja">Ei toiveita.</li>';
+
+        container.innerHTML = `
+            <header class="topbar">
+                <div class="brand">
+                    <img src="assets/finnlines-logo.svg" alt="Finnlines">
+                    <div class="brand-divider"></div>
+                    <span class="brand-app-name">Vuorohallinta</span>
+                </div>
+                <nav class="nav">
+                    <button id="nakyma-kalenteri">Kalenteri</button>
+                    <button id="nakyma-lomat">Lomapyynnöt</button>
+                    <button id="nakyma-toiveet" class="ensisijainen">Toiveet${odottavat.length > 0 ? ` (${odottavat.length})` : ''}</button>
+                    <button id="nakyma-poikkeukset">Poikkeuspäivät</button>
+                    <button id="nakyma-henkilosto">Henkilöstö</button>
+                    <button id="logout">Kirjaudu ulos</button>
+                </nav>
+            </header>
+
+            <div class="page-header">
+                <h1>Työvuorotoiveet</h1>
+                <p class="muted">Käy läpi toiveet ennen vuorojen luomista. Hyväksytyt "en käytettävissä" -toiveet näkyvät automatiikassa kuten lomat.</p>
+            </div>
+
+            <h2>Odottavat hyväksyntää</h2>
+            <ul class="lomalista">${odottavatHtml}</ul>
+
+            <h2>Kaikki toiveet</h2>
+            <ul class="lomalista">${kaikkiHtml}</ul>
+        `;
+
+        this.kiinnitaYhteisetTapahtumat(container);
+
+        container.querySelectorAll('.hyvaksy').forEach(btn => {
+            btn.addEventListener('click', () => {
+                Wishes.paivita(parseFloat(btn.dataset.id), 'hyvaksytty');
+                this.render(container);
+            });
+        });
+        container.querySelectorAll('.hylkaa').forEach(btn => {
+            btn.addEventListener('click', () => {
+                Wishes.paivita(parseFloat(btn.dataset.id), 'hylatty');
+                this.render(container);
+            });
+        });
     },
 
     renderHenkilosto(container) {
@@ -259,6 +350,7 @@ const ManagerView = {
                 <nav class="nav">
                     <button id="nakyma-kalenteri">Kalenteri</button>
                     <button id="nakyma-lomat">Lomapyynnöt</button>
+                    <button id="nakyma-toiveet">Toiveet${(() => { const n = Wishes.odottavat().length; return n > 0 ? ` (${n})` : ''; })()}</button>
                     <button id="nakyma-poikkeukset">Poikkeuspäivät</button>
                     <button id="nakyma-henkilosto" class="ensisijainen">Henkilöstö</button>
                     <button id="logout">Kirjaudu ulos</button>
@@ -370,6 +462,7 @@ const ManagerView = {
                 <nav class="nav">
                     <button id="nakyma-kalenteri">Kalenteri</button>
                     <button id="nakyma-lomat">Lomapyynnöt</button>
+                    <button id="nakyma-toiveet">Toiveet${(() => { const n = Wishes.odottavat().length; return n > 0 ? ` (${n})` : ''; })()}</button>
                     <button id="nakyma-poikkeukset" class="ensisijainen">Poikkeuspäivät</button>
                     <button id="nakyma-henkilosto">Henkilöstö</button>
                     <button id="logout">Kirjaudu ulos</button>

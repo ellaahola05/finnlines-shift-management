@@ -29,6 +29,27 @@ const EmployeeView = {
             `).join('')
             : '<li class="tyhja">Ei pyyntöjä.</li>';
 
+        const omatToiveet = Wishes.tyontekijalle(user.id)
+            .sort((a, b) => b.luotu.localeCompare(a.luotu));
+        const toiveetHtml = omatToiveet.length
+            ? omatToiveet.map(w => {
+                const tyyppiNimi = TOIVE_TYYPPI_NIMI[w.tyyppi] || w.tyyppi;
+                const ikoni = w.tyyppi === 'ei_kaytettavissa' ? '🔴' :
+                              w.tyyppi === 'toivoo_toita' ? '🟢' : '💬';
+                const kommentti = w.kommentti ? ` <em class="kommentti">"${w.kommentti}"</em>` : '';
+                return `
+                    <li>
+                        <span class="toive-ikoni">${ikoni}</span>
+                        <strong>${tyyppiNimi}</strong>
+                        ${this.muotoilePvm(w.alku)}${w.alku !== w.loppu ? ' – ' + this.muotoilePvm(w.loppu) : ''}
+                        ${kommentti}
+                        <span class="tila tila-${w.tila}">${this.tilanNimi(w.tila)}</span>
+                        <button data-id="${w.id}" class="hylkaa poista-toive">Poista</button>
+                    </li>
+                `;
+            }).join('')
+            : '<li class="tyhja">Ei toiveita.</li>';
+
         container.innerHTML = `
             <header class="topbar">
                 <div class="brand">
@@ -76,6 +97,22 @@ const EmployeeView = {
 
             <h2>Omat pyynnöt</h2>
             <ul class="lomalista">${lomaHtml}</ul>
+
+            <h2>Työvuorotoiveet</h2>
+            <form id="toive-lomake" class="loma-lomake">
+                <label>Tyyppi:
+                    <select id="toive-tyyppi" required>
+                        <option value="ei_kaytettavissa">🔴 En käytettävissä</option>
+                        <option value="toivoo_toita">🟢 Toivon töitä</option>
+                        <option value="muu">💬 Muu toive</option>
+                    </select>
+                </label>
+                <label>Alkupäivä: <input type="date" id="toive-alku" required></label>
+                <label>Loppupäivä: <input type="date" id="toive-loppu" required></label>
+                <label>Kommentti (valinnainen): <input type="text" id="toive-kommentti" placeholder="esim. 'Aloitan mieluiten 10 jälkeen'"></label>
+                <button type="submit" class="ensisijainen">Lähetä toive</button>
+            </form>
+            <ul class="lomalista">${toiveetHtml}</ul>
         `;
 
         document.getElementById('logout').addEventListener('click', () => {
@@ -105,6 +142,27 @@ const EmployeeView = {
             Leave.sairasilmoitus(user.id, tanaan);
             alert('Sairasilmoitus tallennettu. Esihenkilö saa tiedon.');
             this.render(container);
+        });
+
+        document.getElementById('toive-lomake').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const tyyppi = document.getElementById('toive-tyyppi').value;
+            const alku = document.getElementById('toive-alku').value;
+            const loppu = document.getElementById('toive-loppu').value;
+            const kommentti = document.getElementById('toive-kommentti').value.trim();
+            if (alku > loppu) { alert('Alkupäivä ei voi olla loppupäivän jälkeen.'); return; }
+            if (tyyppi === 'muu' && !kommentti) { alert('Kerro lyhyesti mitä toivot kommenttikentässä.'); return; }
+            Wishes.pyyda(user.id, tyyppi, alku, loppu, kommentti);
+            this.render(container);
+        });
+
+        container.querySelectorAll('.poista-toive').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (confirm('Poistetaanko toive?')) {
+                    Wishes.poista(parseFloat(btn.dataset.id));
+                    this.render(container);
+                }
+            });
         });
     },
 

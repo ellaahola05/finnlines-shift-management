@@ -139,8 +139,11 @@ const Shifts = {
         const ehdokkaat = TYONTEKIJAT.filter(t => t.rooli === 'satamahenkilokunta');
         if (ehdokkaat.length === 0) return null;
 
-        // Suodata pois lomalla olevat
-        const vapaat = ehdokkaat.filter(t => !Leave.onkoVapaalla(t.id, paivaIso));
+        // Suodata pois lomalla olevat ja "en käytettävissä" -toiveen lähettäneet
+        const vapaat = ehdokkaat.filter(t =>
+            !Leave.onkoVapaalla(t.id, paivaIso) &&
+            !Wishes.onkoEiKaytettavissa(t.id, paivaIso)
+        );
         if (vapaat.length === 0) return null;
         if (vapaat.length === 1) return vapaat[0];
 
@@ -219,14 +222,19 @@ const Shifts = {
         // Älä valitse työntekijää, joka on jo paikalla tänä päivänä
         const tanaan = this.paivalle(paivaIso).map(v => v.tyontekijaId);
         const vapaat = ehdokkaat.filter(t =>
-            !tanaan.includes(t.id) && !Leave.onkoVapaalla(t.id, paivaIso)
+            !tanaan.includes(t.id) &&
+            !Leave.onkoVapaalla(t.id, paivaIso) &&
+            !Wishes.onkoEiKaytettavissa(t.id, paivaIso)
         );
 
         // Älä valitse, jos olisi 6+ peräkkäistä työpäivää
         const sopivat = vapaat.filter(t => !this.olisiLiikaaPerakkain(t.id, paivaIso));
 
-        // Järjestä vuoromäärän mukaan (vähiten ensin) → tasapuolinen jako
+        // Järjestä: 1) töitä toivovat ensin, 2) sitten vuoromäärä (vähiten)
         const jarjestetyt = sopivat.sort((a, b) => {
+            const aToivoo = Wishes.toivooToita(a.id, paivaIso) ? 0 : 1;
+            const bToivoo = Wishes.toivooToita(b.id, paivaIso) ? 0 : 1;
+            if (aToivoo !== bToivoo) return aToivoo - bToivoo;
             return this.tyontekijalle(a.id).length - this.tyontekijalle(b.id).length;
         });
 
