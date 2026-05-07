@@ -468,6 +468,147 @@ input[type="number"]:focus {
     font-size: 13px;
 }
 
+/* ===== Klikattava päiväsolu ===== */
+.paiva-solu.klikattava {
+    cursor: pointer;
+}
+.paiva-solu.klikattava:hover {
+    box-shadow: inset 0 0 0 2px var(--navy);
+    z-index: 1;
+}
+
+/* ===== Modaali ===== */
+.modaali-tausta {
+    position: fixed;
+    inset: 0;
+    background: rgba(14, 22, 32, 0.45);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 60px 16px 32px;
+    z-index: 100;
+    animation: fade-in 0.18s ease;
+    overflow-y: auto;
+}
+
+.modaali {
+    background: var(--white);
+    border-radius: var(--radius);
+    width: 100%;
+    max-width: 640px;
+    box-shadow: var(--shadow-lg);
+    padding: 24px 28px 28px;
+    animation: modaali-pop 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes modaali-pop {
+    from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.modaali-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.modaali-header h2 {
+    margin: 0;
+    font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+    font-weight: 500;
+}
+
+.sulje-modaali {
+    font-size: 22px;
+    line-height: 1;
+    padding: 4px 12px;
+    background: transparent;
+    border: 1px solid var(--gray-300);
+    color: var(--gray-700);
+    border-radius: var(--radius-sm);
+}
+.sulje-modaali:hover {
+    background: var(--coral);
+    color: var(--white);
+    border-color: var(--coral);
+}
+
+.poikkeus-varoitus {
+    background: var(--gold-100);
+    border: 1px solid var(--gold);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    color: #7A5C00;
+    font-size: 13px;
+    margin: 12px 0;
+}
+
+.vuorolista-modaali li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.vuoro-aika {
+    font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    color: var(--gray-700);
+    font-variant-numeric: tabular-nums;
+}
+
+.vuoro-aika-muokkaus {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+input[type="time"].muokkaa-aika {
+    font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    font-size: 13px;
+    padding: 4px 8px;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-sm);
+    background: var(--white);
+    width: 95px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+input[type="time"].muokkaa-aika:focus {
+    outline: none;
+    border-color: var(--navy);
+    box-shadow: 0 0 0 3px var(--navy-100);
+}
+
+.aikaviiva {
+    color: var(--gray-500);
+}
+
+.mukautettu-merkki {
+    font-size: 12px;
+    margin-left: 2px;
+    cursor: help;
+}
+
+.vuoro-tyyppi-merkki {
+    font-size: 11px;
+    color: var(--gray-500);
+    background: var(--navy-50);
+    padding: 2px 8px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--navy-100);
+    margin-left: auto;
+}
+
+@media (max-width: 720px) {
+    .modaali { padding: 18px; max-width: 100%; }
+    .modaali-tausta { padding: 16px; }
+}
+
 /* ===== Calendar grid ===== */
 .kuukausi-grid {
     display: grid;

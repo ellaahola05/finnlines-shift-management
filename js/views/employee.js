@@ -212,8 +212,8 @@ const EmployeeView = {
             sisaltoHtml = `<div class="merkki">🤒 Sairas</div>`;
         } else if (omatVuorot.length > 0) {
             sisaltoHtml = omatVuorot.map(v => {
-                const t = VUOROTYYPIT[v.vuorotyyppi];
-                return `<div class="merkki">${t.alku}–${t.loppu}</div>`;
+                const a = Shifts.aika(v);
+                return `<div class="merkki">${a.alku}–${a.loppu}</div>`;
             }).join('');
         }
 

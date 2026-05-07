@@ -115,6 +115,13 @@ const ManagerView = {
                 }
             });
         }
+
+        // Päivän klikkaus → avaa muokkausmodaali
+        container.querySelectorAll('.paiva-solu[data-paiva]').forEach(solu => {
+            solu.addEventListener('click', () => {
+                this.avaaPaivaEditori(solu.dataset.paiva, container);
+            });
+        });
     },
 
     renderLomat(container) {
@@ -525,12 +532,12 @@ const ManagerView = {
         const vuorot = Shifts.paivalle(iso);
         const vuoroHtml = vuorot.map(v => {
             const tyontekija = TYONTEKIJAT.find(t => t.id === v.tyontekijaId);
-            const tyyppi = VUOROTYYPIT[v.vuorotyyppi];
+            const aika = Shifts.aika(v);
             const lyhytNimi = tyontekija?.nimi.split(' ')[0] || '?';
-            return `<li title="${tyontekija?.nimi || '?'} — ${tyyppi.alku}–${tyyppi.loppu}">${lyhytNimi}</li>`;
+            return `<li title="${tyontekija?.nimi || '?'} — ${aika.alku}–${aika.loppu}">${lyhytNimi}</li>`;
         }).join('');
 
-        const luokat = ['paiva-solu'];
+        const luokat = ['paiva-solu', 'klikattava'];
         if (!onTassaKuussa) luokat.push('eri-kuukausi');
         if (onViikonloppu) luokat.push('viikonloppu');
         if (onPoikkeus) luokat.push('poikkeus');
@@ -538,7 +545,7 @@ const ManagerView = {
         const poikkeusMerkki = onPoikkeus ? ' ⚠️' : '';
 
         return `
-            <div class="${luokat.join(' ')}">
+            <div class="${luokat.join(' ')}" data-paiva="${iso}" title="Klikkaa muokataksesi">
                 <div class="paiva-numero">${d.getDate()}${poikkeusMerkki}</div>
                 <ul>${vuoroHtml}</ul>
             </div>
@@ -571,5 +578,159 @@ const ManagerView = {
         const k = String(d.getMonth() + 1).padStart(2, '0');
         const p = String(d.getDate()).padStart(2, '0');
         return `${v}-${k}-${p}`;
+    },
+
+    // ===== Päivän muokkausmodaali =====
+
+    avaaPaivaEditori(paivaIso, kalenteriContainer) {
+        const modaali = document.createElement('div');
+        modaali.className = 'modaali-tausta';
+        document.body.appendChild(modaali);
+
+        const sulje = () => {
+            modaali.remove();
+            this.render(kalenteriContainer);
+        };
+
+        const renderModaali = () => {
+            const vuorot = Shifts.paivalle(paivaIso);
+            const onPoikkeus = Exceptions.onkoPoikkeus(paivaIso);
+            const otsikko = this.muotoileIsoPvm(paivaIso);
+
+            const vuoroHtml = vuorot.length
+                ? vuorot.map(v => {
+                    const t = TYONTEKIJAT.find(x => x.id === v.tyontekijaId);
+                    const tyyppiNimi = this.vuorotyypinNimi(v.vuorotyyppi);
+                    const aika = Shifts.aika(v);
+                    const mukautettu = (v.alku || v.loppu) ? '<span class="mukautettu-merkki" title="Aika muokattu">✏️</span>' : '';
+                    return `
+                        <li>
+                            <strong>${t?.nimi || '? (poistettu työntekijä)'}</strong>
+                            <span class="vuoro-aika-muokkaus">
+                                <input type="time" data-id="${v.id}" data-kentta="alku"  value="${aika.alku}"  class="muokkaa-aika">
+                                <span class="aikaviiva">–</span>
+                                <input type="time" data-id="${v.id}" data-kentta="loppu" value="${aika.loppu}" class="muokkaa-aika">
+                                ${mukautettu}
+                            </span>
+                            <span class="vuoro-tyyppi-merkki">${tyyppiNimi}</span>
+                            <button data-id="${v.id}" class="hylkaa poista-vuoro">Poista</button>
+                        </li>
+                    `;
+                }).join('')
+                : '<li class="tyhja">Ei vuoroja tänä päivänä.</li>';
+
+            const poikkeusVaroitus = onPoikkeus
+                ? `<div class="poikkeus-varoitus">⚠️ Tämä on poikkeuspäivä — laiva ei normaalisti lähde.</div>`
+                : '';
+
+            const tyontekijaOptions = TYONTEKIJAT
+                .map(t => `<option value="${t.id}">${t.nimi} (${this.roolinNimi(t.rooli)})</option>`)
+                .join('');
+
+            modaali.innerHTML = `
+                <div class="modaali" role="dialog">
+                    <header class="modaali-header">
+                        <h2>${otsikko}</h2>
+                        <button class="sulje-modaali" title="Sulje">×</button>
+                    </header>
+                    ${poikkeusVaroitus}
+
+                    <h3>Vuorot tänä päivänä</h3>
+                    <ul class="lomalista vuorolista-modaali">${vuoroHtml}</ul>
+
+                    <h3>Lisää vuoro</h3>
+                    <form id="lisays-lomake" class="loma-lomake">
+                        <label>Työntekijä:
+                            <select id="lisays-tyontekija" required>${tyontekijaOptions}</select>
+                        </label>
+                        <label>Vuorotyyppi:
+                            <select id="lisays-vuorotyyppi" required></select>
+                        </label>
+                        <button type="submit" class="ensisijainen">Lisää vuoro</button>
+                    </form>
+                </div>
+            `;
+
+            // Sulkemiset
+            modaali.addEventListener('click', (e) => {
+                if (e.target === modaali) sulje();
+            });
+            modaali.querySelector('.sulje-modaali').addEventListener('click', sulje);
+
+            // Poistot
+            modaali.querySelectorAll('.poista-vuoro').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    if (confirm('Poistetaanko vuoro?')) {
+                        Shifts.poista(parseFloat(btn.dataset.id));
+                        renderModaali();
+                    }
+                });
+            });
+
+            // Kellonajan muokkaus
+            modaali.querySelectorAll('.muokkaa-aika').forEach(input => {
+                input.addEventListener('change', () => {
+                    const id = parseFloat(input.dataset.id);
+                    const kentta = input.dataset.kentta;
+                    Shifts.paivita(id, { [kentta]: input.value });
+                    renderModaali();
+                });
+            });
+
+            // Vuorotyyppi-pudotusvalikko päivittyy työntekijän mukaan
+            const tyontekijaSelect = modaali.querySelector('#lisays-tyontekija');
+            const tyyppiSelect = modaali.querySelector('#lisays-vuorotyyppi');
+            const paivitaTyyppiOptiot = () => {
+                const id = parseInt(tyontekijaSelect.value, 10);
+                const t = TYONTEKIJAT.find(x => x.id === id);
+                if (!t) return;
+                const validit = Object.entries(VUOROTYYPIT)
+                    .filter(([_, v]) => v.rooli === t.rooli);
+                tyyppiSelect.innerHTML = validit.length
+                    ? validit.map(([k, v]) => `<option value="${k}">${this.vuorotyypinNimi(k)} (${v.alku}–${v.loppu})</option>`).join('')
+                    : '<option value="">Ei sopivia vuorotyyppejä tälle roolille</option>';
+            };
+            tyontekijaSelect.addEventListener('change', paivitaTyyppiOptiot);
+            paivitaTyyppiOptiot();
+
+            // Lähetä lomake
+            modaali.querySelector('#lisays-lomake').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const tyontekijaId = parseInt(tyontekijaSelect.value, 10);
+                const vuorotyyppi = tyyppiSelect.value;
+                if (!vuorotyyppi) return;
+                Shifts.lisaa(paivaIso, tyontekijaId, vuorotyyppi);
+                renderModaali();
+            });
+        };
+
+        renderModaali();
+    },
+
+    vuorotyypinNimi(avain) {
+        return ({
+            esihenkilo:                          'Esihenkilö',
+            ryhma:                               'Ryhmämyynti',
+            satamavastaava:                      'Satamavastaava',
+            asiakaspalvelu_aamu:                 'Aamuvuoro',
+            asiakaspalvelu_lyhyt:                'Lyhyt vuoro',
+            asiakaspalvelu_lahtoselvitys_arki:   'Lähtöselvitys (arki)',
+            asiakaspalvelu_lahtoselvitys_vkl:    'Lähtöselvitys (vkl)',
+        })[avain] || avain;
+    },
+
+    roolinNimi(rooli) {
+        return ({
+            esihenkilo:          'Esihenkilö',
+            asiakaspalvelu:      'Asiakaspalvelu',
+            ryhmamyynti:         'Ryhmämyynti',
+            satamahenkilokunta:  'Satamahenkilökunta',
+        })[rooli] || rooli;
+    },
+
+    muotoileIsoPvm(iso) {
+        const d = new Date(iso);
+        const viikonpaivat = ['Sunnuntai','Maanantai','Tiistai','Keskiviikko','Torstai','Perjantai','Lauantai'];
+        return `${viikonpaivat[d.getDay()]} ${d.getDate()}.${d.getMonth()+1}.${d.getFullYear()}`;
     },
 };

@@ -28,6 +28,24 @@ const Shifts = {
         this.tallenna(vuorot);
     },
 
+    // Päivittää annetut kentät yhteen vuoroon
+    paivita(id, paivitykset) {
+        const vuorot = this.kaikki().map(v =>
+            v.id === id ? { ...v, ...paivitykset } : v
+        );
+        this.tallenna(vuorot);
+    },
+
+    // Palauttaa vuoron efektiivisen alku/loppu-ajan
+    // (mukautettu jos asetettu, muuten vuorotyypin oletus)
+    aika(vuoro) {
+        const tyyppi = VUOROTYYPIT[vuoro.vuorotyyppi] || { alku: '', loppu: '' };
+        return {
+            alku:  vuoro.alku  || tyyppi.alku,
+            loppu: vuoro.loppu || tyyppi.loppu,
+        };
+    },
+
     paivalle(paiva) {
         return this.kaikki().filter(v => v.paiva === paiva);
     },
