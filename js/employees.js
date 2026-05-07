@@ -8,10 +8,14 @@ const Employees = {
     init() {
         const tallennetut = Storage.load(this.AVAIN);
         if (tallennetut && Array.isArray(tallennetut) && tallennetut.length > 0) {
-            // Migraatio: yksilomyynti → asiakaspalvelu (vanhempi rooli-nimi)
-            const migratoidut = tallennetut.map(t =>
-                t.rooli === 'yksilomyynti' ? { ...t, rooli: 'asiakaspalvelu' } : t
-            );
+            const migratoidut = tallennetut.map(t => {
+                let m = { ...t };
+                // Migraatio: yksilomyynti → asiakaspalvelu (vanhempi rooli-nimi)
+                if (m.rooli === 'yksilomyynti') m.rooli = 'asiakaspalvelu';
+                // Migraatio: lisää sopimustieto jos puuttuu
+                if (!m.sopimus) m.sopimus = this.oletusSopimus(m);
+                return m;
+            });
             TYONTEKIJAT.length = 0;
             TYONTEKIJAT.push(...migratoidut);
             this.tallenna();
@@ -22,6 +26,15 @@ const Employees = {
 
         // Migratoi myös tallennetut vuorot
         this.migratoiVuorot();
+    },
+
+    // Päättelee oletussopimuksen tyypin perusteella (käytetään migraatioon
+    // ja jos lomakkeessa ei ole vielä sopimusvalintaa)
+    oletusSopimus(t) {
+        if (t.tyyppi === 'kesatyontekija' || t.tyyppi === 'maaraaikainen') {
+            return { viikkotunnit: 37.5, viikkotunnitMin: 20 };
+        }
+        return { viikkotunnit: 37.5 };
     },
 
     migratoiVuorot() {
@@ -48,14 +61,23 @@ const Employees = {
         Storage.save(this.AVAIN, TYONTEKIJAT);
     },
 
-    lisaa(nimi, rooli, tyyppi) {
+    lisaa(nimi, rooli, tyyppi, sopimus) {
         const id = TYONTEKIJAT.length === 0
             ? 1
             : Math.max(...TYONTEKIJAT.map(t => t.id)) + 1;
-        const uusi = { id, nimi, rooli, tyyppi };
+        const uusi = { id, nimi, rooli, tyyppi, sopimus: sopimus || this.oletusSopimus({ tyyppi }) };
         TYONTEKIJAT.push(uusi);
         this.tallenna();
         return uusi;
+    },
+
+    // Päivitä olemassaolevan työntekijän sopimustiedot
+    paivitaSopimus(id, sopimus) {
+        const t = TYONTEKIJAT.find(x => x.id === id);
+        if (!t) return false;
+        t.sopimus = sopimus;
+        this.tallenna();
+        return true;
     },
 
     poista(id) {

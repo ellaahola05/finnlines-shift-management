@@ -222,14 +222,21 @@ const ManagerView = {
             const lukumaara = tt.length;
             const liHtml = tt.length
                 ? tt.map(t => {
-                    const tyyppiNimi = t.tyyppi === 'kesatyontekija' ? 'Kesätyöntekijä' : 'Vakituinen';
+                    const tyyppiNimi = TYYPPI_NIMI[t.tyyppi] || t.tyyppi;
+                    const sop = t.sopimus || { viikkotunnit: 37.5 };
+                    const sopimusTeksti = (sop.viikkotunnitMin && sop.viikkotunnitMin < sop.viikkotunnit)
+                        ? `${sop.viikkotunnitMin}–${sop.viikkotunnit} h/vko`
+                        : `${sop.viikkotunnit} h/vko`;
                     const poistoNappi = Employees.onkoEsihenkilo(t.id)
                         ? '<span class="lukko" title="Esihenkilöä ei voi poistaa">🔒</span>'
                         : `<button data-id="${t.id}" class="hylkaa poista-tt">Poista</button>`;
                     return `
                         <li>
-                            <strong>${t.nimi}</strong>
-                            <span class="tila tila-info">${tyyppiNimi}</span>
+                            <div class="tt-rivi">
+                                <strong>${t.nimi}</strong>
+                                <span class="tila tila-info">${tyyppiNimi}</span>
+                                <span class="sopimus-info">${sopimusTeksti}</span>
+                            </div>
                             ${poistoNappi}
                         </li>
                     `;
@@ -275,9 +282,12 @@ const ManagerView = {
                 <label>Tyyppi:
                     <select id="uusi-tyyppi" required>
                         <option value="vakituinen">Vakituinen</option>
+                        <option value="maaraaikainen">Määräaikainen</option>
                         <option value="kesatyontekija">Kesätyöntekijä</option>
                     </select>
                 </label>
+                <label id="label-min" style="display:none">Vähintään h/vko: <input type="number" id="uusi-viikkotunnit-min" value="20" min="0" max="60" step="0.5"></label>
+                <label>Enintään h/vko: <input type="number" id="uusi-viikkotunnit" value="37.5" min="0" max="60" step="0.5" required></label>
                 <button type="submit" class="ensisijainen">Lisää</button>
             </form>
 
@@ -286,13 +296,42 @@ const ManagerView = {
 
         this.kiinnitaYhteisetTapahtumat(container);
 
+        // Auto-täyttö: kun tyyppi vaihtuu, päivitä tuntikentät ja näytä/piilota min-kenttä
+        const tyyppiSelect = document.getElementById('uusi-tyyppi');
+        const tunnitInput = document.getElementById('uusi-viikkotunnit');
+        const minInput = document.getElementById('uusi-viikkotunnit-min');
+        const labelMin = document.getElementById('label-min');
+
+        const paivitaTyyppi = () => {
+            const t = tyyppiSelect.value;
+            if (t === 'vakituinen') {
+                tunnitInput.value = '37.5';
+                labelMin.style.display = 'none';
+            } else {
+                tunnitInput.value = '37.5';
+                minInput.value = '20';
+                labelMin.style.display = '';
+            }
+        };
+
+        tyyppiSelect.addEventListener('change', paivitaTyyppi);
+        paivitaTyyppi(); // alusta
+
         document.getElementById('henkilosto-lomake').addEventListener('submit', (e) => {
             e.preventDefault();
             const nimi = document.getElementById('uusi-nimi').value.trim();
             const rooli = document.getElementById('uusi-rooli').value;
             const tyyppi = document.getElementById('uusi-tyyppi').value;
+            const viikkotunnit = parseFloat(tunnitInput.value) || 0;
             if (!nimi) return;
-            Employees.lisaa(nimi, rooli, tyyppi);
+            const sopimus = { viikkotunnit };
+            if (tyyppi !== 'vakituinen') {
+                const min = parseFloat(minInput.value);
+                if (!isNaN(min) && min > 0 && min < viikkotunnit) {
+                    sopimus.viikkotunnitMin = min;
+                }
+            }
+            Employees.lisaa(nimi, rooli, tyyppi, sopimus);
             this.render(container);
         });
 

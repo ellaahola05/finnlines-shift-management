@@ -1,31 +1,40 @@
 // Alkudata — työntekijät, roolit, säännöt
+//
+// Sopimus:
+//   viikkotunnit: viikon nimellisten työtuntien määrä
+// Sopimus: viikkotunnit = enintään / kiinteä määrä,
+// viikkotunnitMin (valinnainen) = vähintään tunteja vaihtelevassa sopimuksessa.
+// Jos viikkotunnitMin puuttuu tai on sama kuin viikkotunnit → kiinteä sopimus.
+const KOKOAIK = { viikkotunnit: 37.5 };
+const TUNTI   = { viikkotunnit: 37.5, viikkotunnitMin: 20 };
+
 const TYONTEKIJAT = [
     // Esihenkilö
-    { id: 1, nimi: 'Esihenkilö Esimerkki', rooli: 'esihenkilo', tyyppi: 'vakituinen' },
+    { id: 1, nimi: 'Esihenkilö Esimerkki', rooli: 'esihenkilo', tyyppi: 'vakituinen', sopimus: KOKOAIK },
 
     // Asiakaspalvelu — vakituiset (7)
-    { id: 2, nimi: 'Anna Aalto', rooli: 'asiakaspalvelu', tyyppi: 'vakituinen' },
-    { id: 3, nimi: 'Bertta Berg', rooli: 'asiakaspalvelu', tyyppi: 'vakituinen' },
-    { id: 4, nimi: 'Cecilia Castrén', rooli: 'asiakaspalvelu', tyyppi: 'vakituinen' },
-    { id: 5, nimi: 'Daniel Dahl', rooli: 'asiakaspalvelu', tyyppi: 'vakituinen' },
-    { id: 6, nimi: 'Eeva Eriksson', rooli: 'asiakaspalvelu', tyyppi: 'vakituinen' },
-    { id: 7, nimi: 'Fanny Forsman', rooli: 'asiakaspalvelu', tyyppi: 'vakituinen' },
-    { id: 8, nimi: 'Gustav Granlund', rooli: 'asiakaspalvelu', tyyppi: 'vakituinen' },
+    { id: 2, nimi: 'Anna Aalto',       rooli: 'asiakaspalvelu', tyyppi: 'vakituinen', sopimus: KOKOAIK },
+    { id: 3, nimi: 'Bertta Berg',      rooli: 'asiakaspalvelu', tyyppi: 'vakituinen', sopimus: KOKOAIK },
+    { id: 4, nimi: 'Cecilia Castrén',  rooli: 'asiakaspalvelu', tyyppi: 'vakituinen', sopimus: KOKOAIK },
+    { id: 5, nimi: 'Daniel Dahl',      rooli: 'asiakaspalvelu', tyyppi: 'vakituinen', sopimus: KOKOAIK },
+    { id: 6, nimi: 'Eeva Eriksson',    rooli: 'asiakaspalvelu', tyyppi: 'vakituinen', sopimus: KOKOAIK },
+    { id: 7, nimi: 'Fanny Forsman',    rooli: 'asiakaspalvelu', tyyppi: 'vakituinen', sopimus: KOKOAIK },
+    { id: 8, nimi: 'Gustav Granlund',  rooli: 'asiakaspalvelu', tyyppi: 'vakituinen', sopimus: KOKOAIK },
 
     // Asiakaspalvelu — kesätyöntekijät (3)
-    { id: 9, nimi: 'Helmi Heikkinen', rooli: 'asiakaspalvelu', tyyppi: 'kesatyontekija' },
-    { id: 10, nimi: 'Iida Ihalainen', rooli: 'asiakaspalvelu', tyyppi: 'kesatyontekija' },
-    { id: 11, nimi: 'Joonas Jokinen', rooli: 'asiakaspalvelu', tyyppi: 'kesatyontekija' },
+    { id: 9,  nimi: 'Helmi Heikkinen', rooli: 'asiakaspalvelu', tyyppi: 'kesatyontekija', sopimus: TUNTI },
+    { id: 10, nimi: 'Iida Ihalainen',  rooli: 'asiakaspalvelu', tyyppi: 'kesatyontekija', sopimus: TUNTI },
+    { id: 11, nimi: 'Joonas Jokinen',  rooli: 'asiakaspalvelu', tyyppi: 'kesatyontekija', sopimus: TUNTI },
 
     // Ryhmämyynti (4)
-    { id: 12, nimi: 'Kaisa Kallio', rooli: 'ryhmamyynti', tyyppi: 'vakituinen' },
-    { id: 13, nimi: 'Lauri Laine', rooli: 'ryhmamyynti', tyyppi: 'vakituinen' },
-    { id: 14, nimi: 'Maria Manninen', rooli: 'ryhmamyynti', tyyppi: 'vakituinen' },
-    { id: 15, nimi: 'Niko Niemi', rooli: 'ryhmamyynti', tyyppi: 'vakituinen' },
+    { id: 12, nimi: 'Kaisa Kallio',    rooli: 'ryhmamyynti', tyyppi: 'vakituinen', sopimus: KOKOAIK },
+    { id: 13, nimi: 'Lauri Laine',     rooli: 'ryhmamyynti', tyyppi: 'vakituinen', sopimus: KOKOAIK },
+    { id: 14, nimi: 'Maria Manninen',  rooli: 'ryhmamyynti', tyyppi: 'vakituinen', sopimus: KOKOAIK },
+    { id: 15, nimi: 'Niko Niemi',      rooli: 'ryhmamyynti', tyyppi: 'vakituinen', sopimus: KOKOAIK },
 
     // Satamahenkilökunta (2) — yksi heistä satamavastaavana per laivapäivä, 5 pv rotaatio
-    { id: 16, nimi: 'Olli Oksanen', rooli: 'satamahenkilokunta', tyyppi: 'vakituinen' },
-    { id: 17, nimi: 'Pekka Peltonen', rooli: 'satamahenkilokunta', tyyppi: 'vakituinen' },
+    { id: 16, nimi: 'Olli Oksanen',    rooli: 'satamahenkilokunta', tyyppi: 'vakituinen', sopimus: KOKOAIK },
+    { id: 17, nimi: 'Pekka Peltonen',  rooli: 'satamahenkilokunta', tyyppi: 'vakituinen', sopimus: KOKOAIK },
 ];
 
 // Vuorotyypit
@@ -53,3 +62,16 @@ const SAANNOT = {
     talviLahtoselvitysMax: 2,
     satamavastaavaRotaatioPaivat: 5, // vaihtuu noin 5 päivän välein
 };
+
+// Työntekijätyypin nimi käyttöliittymää varten
+const TYYPPI_NIMI = {
+    vakituinen:     'Vakituinen',
+    maaraaikainen:  'Määräaikainen',
+    kesatyontekija: 'Kesätyöntekijä',
+};
+
+// Hyväksyntäsääntö: tarvitseeko tämän työntekijän poissaolo esimiehen hyväksyntää?
+// Vakituiset ja määräaikaiset (kokoaikaiset) tarvitsevat. Kesätyöntekijät eivät.
+function tarvitseekoHyvaksynnan(tyontekija) {
+    return tyontekija.tyyppi === 'vakituinen' || tyontekija.tyyppi === 'maaraaikainen';
+}

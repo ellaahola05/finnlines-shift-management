@@ -421,6 +421,37 @@ select:focus {
     box-shadow: 0 0 0 3px var(--navy-100);
 }
 
+input[type="number"] {
+    font-family: inherit;
+    font-size: 14px;
+    padding: 9px 12px;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-sm);
+    background: var(--white);
+    color: var(--ink);
+    width: 110px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+input[type="number"]:focus {
+    outline: none;
+    border-color: var(--navy);
+    box-shadow: 0 0 0 3px var(--navy-100);
+}
+
+.tt-rivi {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    flex: 1;
+}
+
+.sopimus-info {
+    color: var(--gray-500);
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+}
+
 /* ===== Calendar grid ===== */
 .kuukausi-grid {
     display: grid;
