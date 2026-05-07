@@ -5,14 +5,17 @@ const LoginView = {
             <li>
                 <button data-id="${t.id}" class="login-btn">
                     ${t.nimi}
-                    <span class="rooli">(${this.roolinNimi(t.rooli)})</span>
+                    <span class="rooli">${this.roolinNimi(t.rooli)}</span>
                 </button>
             </li>
         `).join('');
 
         container.innerHTML = `
-            <h1>Finnlines vuorohallinta</h1>
-            <p>Valitse kuka olet:</p>
+            <div class="login-hero">
+                <img src="assets/finnlines-logo.svg" alt="Finnlines" class="hero-logo">
+                <h1>Vuorohallinta</h1>
+                <p>Matkustajaliikenteen asiakaspalvelu — valitse kuka olet</p>
+            </div>
             <ul class="login-list">${tyontekijatHtml}</ul>
         `;
 

@@ -31,9 +31,20 @@ const EmployeeView = {
 
         container.innerHTML = `
             <header class="topbar">
-                <h1>Hei, ${user.nimi}!</h1>
-                <button id="logout">Kirjaudu ulos</button>
+                <div class="brand">
+                    <img src="assets/finnlines-logo.svg" alt="Finnlines">
+                    <div class="brand-divider"></div>
+                    <span class="brand-app-name">Vuorohallinta</span>
+                </div>
+                <nav class="nav">
+                    <span class="user-chip">${user.nimi}</span>
+                    <button id="logout">Kirjaudu ulos</button>
+                </nav>
             </header>
+            <div class="page-header">
+                <h1>Hei, ${user.nimi.split(' ')[0]}!</h1>
+                <p class="muted">${this.roolinNimi(user.rooli)} · katso omat vuorosi ja pyydä lomaa</p>
+            </div>
 
             <h2>Omat vuorot</h2>
             <div class="kuukausi-nav">
@@ -187,5 +198,13 @@ const EmployeeView = {
 
     tilanNimi(tila) {
         return { odottaa: 'Odottaa', hyvaksytty: 'Hyväksytty', hylatty: 'Hylätty' }[tila] || tila;
+    },
+
+    roolinNimi(rooli) {
+        return ({
+            esihenkilo: 'Esihenkilö',
+            yksilomyynti: 'Yksilömyynti',
+            ryhmamyynti: 'Ryhmämyynti',
+        })[rooli] || rooli;
     },
 };

@@ -1,118 +1,446 @@
-/* Finnlines vuorohallinta - tyylit */
+/* ===== Finnlines vuorohallinta — design system =====
+   Aesthetic: Nordic Maritime Editorial
+   Display: Fraunces (serif, optical sizing)
+   Body: DM Sans (humanist sans)
+   Palette: deep navy, warm ivory, coral accent
+*/
+
+:root {
+    /* Brand */
+    --navy:        #001F3D;
+    --navy-700:    #002B52;
+    --navy-500:    #1B4F8C;
+    --navy-100:    #E5EAF2;
+    --navy-50:     #F1F4F9;
+
+    --coral:       #E63946;
+    --coral-700:   #C8323F;
+
+    --gold:        #C8A951;
+    --gold-100:    #F5EFD9;
+
+    /* Surface */
+    --paper:       #F5F2EC;   /* warm off-white app background */
+    --ivory:       #FAF7F2;   /* cards / alt background */
+    --white:       #FFFFFF;
+
+    /* Neutrals */
+    --ink:         #0E1620;
+    --gray-700:    #4A5258;
+    --gray-500:    #8B95A1;
+    --gray-300:    #D4DAE2;
+    --gray-200:    #E5E9EE;
+    --gray-100:    #F0F2F5;
+
+    /* Semantic */
+    --success-bg:  #DDEFDD;
+    --success-fg:  #1B5E20;
+    --danger-bg:   #FFE0E0;
+    --danger-fg:   #B71C1C;
+
+    /* Effects */
+    --shadow-sm:   0 1px 2px rgba(0, 31, 61, 0.05);
+    --shadow-md:   0 4px 16px rgba(0, 31, 61, 0.06);
+    --shadow-lg:   0 16px 40px rgba(0, 31, 61, 0.10);
+    --radius:      12px;
+    --radius-sm:   8px;
+    --radius-pill: 100px;
+}
+
+/* ===== Reset ===== */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
 body {
-    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
     margin: 0;
-    padding: 20px;
-    background: #f5f5f5;
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+    color: var(--ink);
+    background: var(--paper);
+    letter-spacing: -0.005em;
+    -webkit-font-smoothing: antialiased;
 }
 
 #app {
-    max-width: 1000px;
+    max-width: 1280px;
     margin: 0 auto;
-    background: white;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 32px;
+    animation: fade-in 0.4s ease;
+}
+
+@keyframes fade-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== Typography ===== */
+h1, h2, h3 {
+    font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+    font-weight: 500;
+    color: var(--navy);
+    letter-spacing: -0.02em;
+    margin: 0 0 12px 0;
+}
+
+h1 {
+    font-size: clamp(1.75rem, 3vw, 2.5rem);
+    font-variation-settings: 'opsz' 144;
+    line-height: 1.1;
+}
+
+h2 {
+    font-size: 1.4rem;
+    font-variation-settings: 'opsz' 36;
+    margin-top: 32px;
+    margin-bottom: 16px;
+}
+
+h3 {
+    font-size: 1.05rem;
+    font-variation-settings: 'opsz' 18;
+}
+
+p { margin: 0 0 12px 0; color: var(--gray-700); }
+
+small { color: var(--gray-500); }
+
+/* ===== Header / Brand ===== */
+.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--white);
+    padding: 18px 28px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.brand img {
+    height: 28px;
+    width: auto;
+    display: block;
+}
+
+.brand-divider {
+    width: 1px;
+    height: 24px;
+    background: var(--gray-300);
+}
+
+.brand-app-name {
+    font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+    font-weight: 500;
+    font-variation-settings: 'opsz' 18;
+    font-size: 1rem;
+    color: var(--navy);
+    letter-spacing: 0.01em;
+}
+
+.brand-app-name::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background: var(--coral);
+    border-radius: 50%;
+    margin-right: 8px;
+    transform: translateY(-2px);
+}
+
+.topbar h1 { margin: 0; font-size: 1.4rem; }
+
+/* ===== Page header (under topbar) ===== */
+.page-header {
+    margin: 8px 4px 24px;
+}
+.page-header h1 { margin: 0 0 4px; }
+.page-header .muted {
+    color: var(--gray-500);
+    font-size: 14px;
+    margin: 0;
+}
+
+/* ===== Navigation ===== */
+.nav {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.user-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 14px;
+    background: var(--navy-50);
+    color: var(--navy);
+    border-radius: var(--radius-pill);
+    font-size: 12.5px;
+    font-weight: 500;
+    border: 1px solid var(--navy-100);
+}
+
+/* ===== Buttons ===== */
+button {
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    padding: 9px 16px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--gray-300);
+    background: var(--white);
+    color: var(--ink);
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, transform 0.1s, box-shadow 0.15s;
+}
+
+button:hover {
+    border-color: var(--navy);
+    background: var(--navy-50);
+}
+
+button:active { transform: translateY(1px); }
+
+.ensisijainen {
+    background: var(--navy);
+    color: var(--white);
+    border-color: var(--navy);
+}
+
+.ensisijainen:hover {
+    background: var(--navy-700);
+    border-color: var(--navy-700);
+    box-shadow: var(--shadow-md);
+}
+
+.hyvaksy {
+    background: var(--navy);
+    color: var(--white);
+    border-color: var(--navy);
+    margin-left: 8px;
+}
+.hyvaksy:hover { background: var(--navy-700); border-color: var(--navy-700); }
+
+.hylkaa, .poista {
+    background: var(--white);
+    color: var(--coral);
+    border-color: var(--coral);
+    margin-left: 4px;
+}
+.hylkaa:hover, .poista:hover {
+    background: var(--coral);
+    color: var(--white);
+}
+
+/* ===== Login screen ===== */
+.login-hero {
+    text-align: center;
+    padding: 56px 32px 40px;
+    margin-bottom: 24px;
+}
+
+.hero-logo {
+    height: 48px;
+    width: auto;
+    margin-bottom: 32px;
+}
+
+.login-hero h1 {
+    font-size: clamp(2.25rem, 4vw, 3.25rem);
+    font-variation-settings: 'opsz' 144, 'wght' 400;
+    margin-bottom: 12px;
+    position: relative;
+    display: inline-block;
+}
+
+.login-hero h1::after {
+    content: '';
+    display: block;
+    width: 32px;
+    height: 3px;
+    background: var(--coral);
+    margin: 14px auto 0;
+}
+
+.login-hero p {
+    color: var(--gray-700);
+    font-size: 1rem;
+    margin-top: 16px;
 }
 
 .login-list {
     list-style: none;
     padding: 0;
+    margin: 0;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 8px;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
 }
 
 .login-btn {
     width: 100%;
-    padding: 12px;
-    border: 1px solid #ddd;
-    background: white;
-    border-radius: 4px;
-    cursor: pointer;
     text-align: left;
-    font-size: 14px;
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--ink);
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    overflow: hidden;
+}
+
+.login-btn::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: transparent;
+    transition: background 0.2s;
 }
 
 .login-btn:hover {
-    background: #e8f0fe;
-    border-color: #4285f4;
+    border-color: var(--navy);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
 }
+.login-btn:hover::before { background: var(--coral); }
 
-.rooli {
-    color: #666;
-    font-size: 12px;
+.login-btn .rooli {
     display: block;
+    color: var(--gray-500);
+    font-size: 12px;
+    font-weight: 400;
+    margin-top: 4px;
+    letter-spacing: 0.02em;
 }
 
-.topbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
+/* ===== Month navigation ===== */
 .kuukausi-nav {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin: 16px 0;
+    padding: 12px 16px;
+    background: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+}
+
+.kuukausi-nav strong {
+    font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+    font-weight: 500;
+    font-variation-settings: 'opsz' 36;
+    font-size: 1.4rem;
+    color: var(--navy);
+    letter-spacing: -0.01em;
 }
 
 .toiminnot {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 12px;
+    margin: 16px 0;
+    flex-wrap: wrap;
 }
 
-.status {
-    display: inline-block;
-    padding: 4px 10px;
-    border-radius: 12px;
-    font-size: 13px;
-    font-weight: bold;
+/* ===== Status badges ===== */
+.status, .tila {
+    display: inline-flex;
+    align-items: center;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 6px 12px;
+    border-radius: var(--radius-pill);
+    white-space: nowrap;
 }
 
-.status-luonnos { background: #fff4e0; color: #b86200; }
-.status-julkaistu { background: #e0f4e0; color: #0a6b0a; }
+.status-julkaistu {
+    background: var(--navy);
+    color: var(--white);
+}
 
+.status-luonnos {
+    background: var(--gold-100);
+    color: #7A5C00;
+    border: 1px solid var(--gold);
+}
+
+.tila { font-size: 10px; padding: 4px 10px; margin-left: 8px; }
+.tila-odottaa    { background: var(--gold-100); color: #7A5C00; }
+.tila-hyvaksytty { background: var(--success-bg); color: var(--success-fg); }
+.tila-hylatty    { background: var(--danger-bg); color: var(--danger-fg); }
+
+/* ===== Calendar grid ===== */
 .kuukausi-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 2px;
-    background: #eee;
-    border: 1px solid #eee;
+    gap: 1px;
+    background: var(--gray-300);
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
 }
 
 .paiva-otsikko {
-    background: #f5f5f5;
-    padding: 6px;
+    background: var(--navy);
+    color: var(--white);
+    padding: 12px 8px;
     text-align: center;
-    font-weight: bold;
-    font-size: 12px;
-    color: #555;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
 }
 
 .paiva-solu {
-    background: white;
-    min-height: 90px;
-    padding: 4px;
-    font-size: 11px;
+    background: var(--white);
+    min-height: 110px;
+    padding: 8px;
+    transition: background 0.15s;
+    position: relative;
 }
 
 .paiva-solu.eri-kuukausi {
-    background: #fafafa;
-    color: #ccc;
+    background: var(--ivory);
+    color: var(--gray-500);
 }
 
-.paiva-solu.viikonloppu:not(.eri-kuukausi) {
-    background: #f8f8f8;
+.paiva-solu.viikonloppu:not(.eri-kuukausi):not(.oma-vuoro):not(.loma-paiva):not(.sairas-paiva):not(.poikkeus) {
+    background: var(--navy-50);
+}
+
+.paiva-solu.poikkeus {
+    background: linear-gradient(135deg, var(--gold-100) 0%, #FFE4B5 100%);
 }
 
 .paiva-numero {
-    font-weight: bold;
-    font-size: 12px;
-    margin-bottom: 2px;
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--navy);
+    margin-bottom: 4px;
+    font-variant-numeric: tabular-nums;
 }
 
 .paiva-solu ul {
@@ -122,40 +450,58 @@ body {
 }
 
 .paiva-solu li {
-    padding: 1px 3px;
-    background: #e8f0fe;
-    margin-bottom: 1px;
-    border-radius: 2px;
+    padding: 3px 6px;
+    background: var(--navy-100);
+    color: var(--navy);
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    margin-bottom: 2px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    cursor: default;
 }
 
 .paiva-solu.eri-kuukausi li {
-    background: #f0f0f0;
+    background: var(--gray-100);
+    color: var(--gray-500);
 }
 
-/* Työntekijän oma kalenteri — korostukset */
+.paiva-solu li.tyhja {
+    background: none;
+    color: var(--gray-500);
+    font-style: italic;
+    font-weight: 400;
+}
+
+/* ===== Employee calendar — own shifts highlighted ===== */
 .paiva-solu.oma-vuoro {
-    background: #d4e7ff;
-    border: 1px solid #4285f4;
+    background: var(--navy);
+    color: var(--white);
+}
+.paiva-solu.oma-vuoro .paiva-numero { color: var(--white); }
+.paiva-solu.oma-vuoro .merkki {
+    color: rgba(255,255,255,0.92);
+    font-size: 11px;
+    font-weight: 500;
+    margin-top: 2px;
+    font-variant-numeric: tabular-nums;
 }
 
 .paiva-solu.loma-paiva {
-    background: #fff4d6;
-    border: 1px solid #f5b800;
+    background: var(--gold);
+    color: var(--navy);
 }
+.paiva-solu.loma-paiva .paiva-numero { color: var(--navy); }
+.paiva-solu.loma-paiva .merkki { font-weight: 600; font-size: 11px; }
 
 .paiva-solu.sairas-paiva {
-    background: #ffe0e0;
-    border: 1px solid #ea4335;
+    background: var(--coral);
+    color: var(--white);
 }
-
-.paiva-solu .merkki {
-    font-size: 11px;
-    margin-top: 2px;
-    font-weight: 500;
-}
+.paiva-solu.sairas-paiva .paiva-numero { color: var(--white); }
+.paiva-solu.sairas-paiva .merkki { color: var(--white); font-weight: 600; font-size: 11px; }
 
 .paiva-solu.eri-kuukausi.oma-vuoro,
 .paiva-solu.eri-kuukausi.loma-paiva,
@@ -163,108 +509,99 @@ body {
     opacity: 0.4;
 }
 
-.paiva-solu.poikkeus {
-    background: #fff4e0;
-    border: 1px solid #ffb84d;
-}
-
-.vuorolista {
-    list-style: none;
-    padding: 0;
-}
-
-.vuorolista li {
-    padding: 12px;
-    border-bottom: 1px solid #eee;
-}
-
-.ensisijainen {
-    background: #4285f4;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: bold;
-}
-
-.ensisijainen:hover {
-    background: #3367d6;
-}
-
+/* ===== Forms ===== */
 .loma-lomake {
     display: flex;
     gap: 12px;
-    align-items: end;
-    margin-bottom: 16px;
+    align-items: flex-end;
     flex-wrap: wrap;
+    background: var(--white);
+    padding: 20px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 16px;
 }
 
 .loma-lomake label {
     display: flex;
     flex-direction: column;
-    font-size: 13px;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--gray-700);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
 }
 
-.lomalista {
+input[type="date"], input[type="text"] {
+    font-family: inherit;
+    font-size: 14px;
+    padding: 9px 12px;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-sm);
+    background: var(--white);
+    color: var(--ink);
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+input[type="date"]:focus, input[type="text"]:focus {
+    outline: none;
+    border-color: var(--navy);
+    box-shadow: 0 0 0 3px var(--navy-100);
+}
+
+/* ===== Lists (vacation/exception) ===== */
+.lomalista, .vuorolista {
     list-style: none;
     padding: 0;
+    margin: 0;
+    background: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
 }
 
-.lomalista li {
-    padding: 12px;
-    border-bottom: 1px solid #eee;
-}
-
-.tila {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 12px;
-    margin-left: 8px;
-}
-
-.tila-odottaa { background: #fff4e0; color: #b86200; }
-.tila-hyvaksytty { background: #e0f4e0; color: #0a6b0a; }
-.tila-hylatty { background: #ffe0e0; color: #a30000; }
-
-.nav {
+.lomalista li, .vuorolista li {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--gray-200);
     display: flex;
-    gap: 8px;
+    align-items: center;
     flex-wrap: wrap;
+    gap: 8px;
 }
 
-button {
-    padding: 6px 12px;
-    border: 1px solid #ddd;
-    background: white;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 13px;
+.lomalista li:last-child, .vuorolista li:last-child {
+    border-bottom: none;
 }
 
-button:hover {
-    background: #f0f0f0;
+.lomalista li.tyhja, .vuorolista li.tyhja {
+    color: var(--gray-500);
+    font-style: italic;
+    justify-content: center;
+    padding: 24px;
 }
 
-.ensisijainen:hover {
-    background: #3367d6;
+/* ===== Logout button — subtle, on the right ===== */
+#logout {
+    background: transparent;
+    border: 1px solid var(--gray-300);
+    color: var(--gray-700);
+}
+#logout:hover {
+    border-color: var(--coral);
+    color: var(--coral);
+    background: transparent;
 }
 
-.hyvaksy {
-    background: #34a853;
-    color: white;
-    border: none;
-    margin-left: 8px;
+/* ===== Mobile ===== */
+@media (max-width: 720px) {
+    #app { padding: 16px; }
+    .topbar { padding: 14px 18px; }
+    .brand img { height: 22px; }
+    .paiva-solu { min-height: 80px; padding: 4px; font-size: 10px; }
+    .paiva-numero { font-size: 11px; }
+    .paiva-solu li, .paiva-solu .merkki { font-size: 10px; }
+    .paiva-otsikko { padding: 8px 4px; font-size: 9px; letter-spacing: 0.05em; }
+    h1 { font-size: 1.3rem; }
+    .kuukausi-nav strong { font-size: 1rem; }
 }
-
-.hyvaksy:hover { background: #2d8e47; }
-
-.hylkaa {
-    background: #ea4335;
-    color: white;
-    border: none;
-    margin-left: 4px;
-}
-
-.hylkaa:hover { background: #c33a2c; }

@@ -35,7 +35,11 @@ const ManagerView = {
 
         container.innerHTML = `
             <header class="topbar">
-                <h1>Esihenkilön näkymä</h1>
+                <div class="brand">
+                    <img src="assets/finnlines-logo.svg" alt="Finnlines">
+                    <div class="brand-divider"></div>
+                    <span class="brand-app-name">Vuorohallinta</span>
+                </div>
                 <nav class="nav">
                     <button id="nakyma-kalenteri" class="ensisijainen">Kalenteri</button>
                     ${lomaNappi}
@@ -43,6 +47,10 @@ const ManagerView = {
                     <button id="logout">Kirjaudu ulos</button>
                 </nav>
             </header>
+            <div class="page-header">
+                <h1>Esihenkilön näkymä</h1>
+                <p class="muted">Suunnittele ja julkaise kuukauden vuorot.</p>
+            </div>
             <div class="kuukausi-nav">
                 <button id="edellinen">← Edellinen kuukausi</button>
                 <strong>${this.kuukaudenNimi(this.nykyinenKuukausi)} ${this.nykyinenVuosi}</strong>
@@ -131,7 +139,11 @@ const ManagerView = {
 
         container.innerHTML = `
             <header class="topbar">
-                <h1>Lomapyynnöt</h1>
+                <div class="brand">
+                    <img src="assets/finnlines-logo.svg" alt="Finnlines">
+                    <div class="brand-divider"></div>
+                    <span class="brand-app-name">Vuorohallinta</span>
+                </div>
                 <nav class="nav">
                     <button id="nakyma-kalenteri">Kalenteri</button>
                     <button id="nakyma-lomat" class="ensisijainen">Lomapyynnöt</button>
@@ -139,6 +151,10 @@ const ManagerView = {
                     <button id="logout">Kirjaudu ulos</button>
                 </nav>
             </header>
+            <div class="page-header">
+                <h1>Lomapyynnöt</h1>
+                <p class="muted">Hyväksy tai hylkää työntekijöiden lomatoiveita.</p>
+            </div>
 
             <h2>Odottavat pyynnöt</h2>
             <ul class="lomalista">${odottavatHtml}</ul>
@@ -196,7 +212,11 @@ const ManagerView = {
 
         container.innerHTML = `
             <header class="topbar">
-                <h1>Poikkeuspäivät</h1>
+                <div class="brand">
+                    <img src="assets/finnlines-logo.svg" alt="Finnlines">
+                    <div class="brand-divider"></div>
+                    <span class="brand-app-name">Vuorohallinta</span>
+                </div>
                 <nav class="nav">
                     <button id="nakyma-kalenteri">Kalenteri</button>
                     <button id="nakyma-lomat">Lomapyynnöt</button>
@@ -204,8 +224,10 @@ const ManagerView = {
                     <button id="logout">Kirjaudu ulos</button>
                 </nav>
             </header>
-
-            <p>Päivät joina laiva ei lähde — vuoroja ei luoda näille päiville.</p>
+            <div class="page-header">
+                <h1>Poikkeuspäivät</h1>
+                <p class="muted">Päivät joina laiva ei lähde — vuoroja ei luoda näille päiville.</p>
+            </div>
 
             <form id="poikkeus-lomake" class="loma-lomake">
                 <label>Päivämäärä: <input type="date" id="poikkeus-paiva" required></label>
