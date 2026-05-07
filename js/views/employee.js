@@ -205,6 +205,7 @@ const EmployeeView = {
             esihenkilo: 'Esihenkilö',
             yksilomyynti: 'Yksilömyynti',
             ryhmamyynti: 'Ryhmämyynti',
+            satamahenkilokunta: 'Satamahenkilökunta',
         })[rooli] || rooli;
     },
 };

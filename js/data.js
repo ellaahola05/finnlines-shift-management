@@ -22,6 +22,10 @@ const TYONTEKIJAT = [
     { id: 13, nimi: 'Lauri Laine', rooli: 'ryhmamyynti', tyyppi: 'vakituinen' },
     { id: 14, nimi: 'Maria Manninen', rooli: 'ryhmamyynti', tyyppi: 'vakituinen' },
     { id: 15, nimi: 'Niko Niemi', rooli: 'ryhmamyynti', tyyppi: 'vakituinen' },
+
+    // Satamahenkilökunta (2) — yksi heistä satamavastaavana per laivapäivä, 5 pv rotaatio
+    { id: 16, nimi: 'Olli Oksanen', rooli: 'satamahenkilokunta', tyyppi: 'vakituinen' },
+    { id: 17, nimi: 'Pekka Peltonen', rooli: 'satamahenkilokunta', tyyppi: 'vakituinen' },
 ];
 
 // Vuorotyypit
@@ -32,6 +36,7 @@ const VUOROTYYPIT = {
     yksilo_lahtoselvitys_vkl: { alku: '12:00', loppu: '15:00', rooli: 'yksilomyynti' },
     ryhma: { alku: '08:00', loppu: '16:00', rooli: 'ryhmamyynti' },
     esihenkilo: { alku: '09:00', loppu: '17:00', rooli: 'esihenkilo' },
+    satamavastaava: { alku: '08:00', loppu: '16:00', rooli: 'satamahenkilokunta' },
 };
 
 // Säännöt
@@ -46,4 +51,5 @@ const SAANNOT = {
     talviYksiloMax: 5,
     talviLahtoselvitysMin: 1,
     talviLahtoselvitysMax: 2,
+    satamavastaavaRotaatioPaivat: 5, // vaihtuu noin 5 päivän välein
 };

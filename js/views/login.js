@@ -33,6 +33,7 @@ const LoginView = {
             esihenkilo: 'Esihenkilö',
             yksilomyynti: 'Yksilömyynti',
             ryhmamyynti: 'Ryhmämyynti',
+            satamahenkilokunta: 'Satamahenkilökunta',
         };
         return nimet[rooli] || rooli;
     },

@@ -104,7 +104,10 @@ const Shifts = {
         // Pyhinä ja poikkeuspäivinä ei vuoroja
         if (onPoikkeuspaiva) return;
 
-        // Viikonloppuna vain lähtöselvitys (jos laiva lähtee)
+        // Satamavastaava — joka laivapäivä (myös viikonloppu)
+        this.luoSatamavastaava(paivaIso);
+
+        // Viikonloppuna lisäksi vain lähtöselvitys
         if (onViikonloppu) {
             this.luoLahtoselvitysVuorot(paivaIso, true);
             return;
@@ -123,6 +126,65 @@ const Shifts = {
 
         // 4. Lähtöselvitys arkisin
         this.luoLahtoselvitysVuorot(paivaIso, false);
+    },
+
+    luoSatamavastaava(paivaIso) {
+        const valittu = this.valitseSatamavastaava(paivaIso);
+        if (valittu) {
+            this.lisaa(paivaIso, valittu.id, 'satamavastaava');
+        }
+    },
+
+    valitseSatamavastaava(paivaIso) {
+        const ehdokkaat = TYONTEKIJAT.filter(t => t.rooli === 'satamahenkilokunta');
+        if (ehdokkaat.length === 0) return null;
+
+        // Suodata pois lomalla olevat
+        const vapaat = ehdokkaat.filter(t => !Leave.onkoVapaalla(t.id, paivaIso));
+        if (vapaat.length === 0) return null;
+        if (vapaat.length === 1) return vapaat[0];
+
+        // Etsi kuka oli satamavastaavana eilen ja kauanko peräkkäin
+        const d = new Date(paivaIso);
+        const eilen = new Date(d);
+        eilen.setDate(d.getDate() - 1);
+        const eilenIso = this.toIso(eilen);
+
+        const eilenSatamavastaava = this.paivalle(eilenIso)
+            .find(v => v.vuorotyyppi === 'satamavastaava');
+
+        // Jos ei ollut eilen ketään, valitaan se jolla on vähemmän satamavastaavia kaikkiaan
+        if (!eilenSatamavastaava) {
+            return vapaat.sort((a, b) =>
+                this.satamavastaavaMaara(a.id) - this.satamavastaavaMaara(b.id)
+            )[0];
+        }
+
+        // Lasketaan kuinka monta peräkkäistä päivää sama henkilö on ollut satamavastaava
+        let perakkainen = 0;
+        for (let i = 1; i <= SAANNOT.satamavastaavaRotaatioPaivat + 1; i++) {
+            const ed = new Date(d);
+            ed.setDate(d.getDate() - i);
+            const v = this.paivalle(this.toIso(ed))
+                .find(v => v.vuorotyyppi === 'satamavastaava');
+            if (!v || v.tyontekijaId !== eilenSatamavastaava.tyontekijaId) break;
+            perakkainen++;
+        }
+
+        // Jos sama henkilö on tehnyt jo 5 päivää peräkkäin, vaihdetaan
+        if (perakkainen >= SAANNOT.satamavastaavaRotaatioPaivat) {
+            const toinen = vapaat.find(t => t.id !== eilenSatamavastaava.tyontekijaId);
+            return toinen || vapaat[0];
+        }
+
+        // Muutoin sama jatkaa, jos vapaana
+        const sama = vapaat.find(t => t.id === eilenSatamavastaava.tyontekijaId);
+        return sama || vapaat[0];
+    },
+
+    satamavastaavaMaara(tyontekijaId) {
+        return this.tyontekijalle(tyontekijaId)
+            .filter(v => v.vuorotyyppi === 'satamavastaava').length;
     },
 
     luoYksiloVuorot(paivaIso) {
