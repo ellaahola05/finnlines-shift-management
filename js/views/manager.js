@@ -2,7 +2,7 @@
 const ManagerView = {
     nykyinenVuosi: null,
     nykyinenKuukausi: null, // 0-11
-    nykyinenNakyma: 'tanaan', // 'tanaan' | 'kalenteri' | 'lomat' | 'toiveet' | 'poikkeukset' | 'henkilosto'
+    nykyinenNakyma: 'tanaan', // 'tanaan' | 'kalenteri' | 'lomat' | 'toiveet' | 'poikkeukset' | 'henkilosto' | 'tulosta-tiimi' | 'tulosta-lahto'
     hakuSana: '',
 
     render(container) {
@@ -14,6 +14,10 @@ const ManagerView = {
 
         if (this.nykyinenNakyma === 'tanaan') {
             this.renderTanaan(container);
+            return;
+        }
+        if (this.nykyinenNakyma === 'tulosta-tiimi' || this.nykyinenNakyma === 'tulosta-lahto') {
+            this.renderTulosta(container);
             return;
         }
         if (this.nykyinenNakyma === 'lomat') {
@@ -81,6 +85,13 @@ const ManagerView = {
                 ${tila}
                 <button id="luo-vuorot" class="ensisijainen">🪄 Luo kuukauden vuorot</button>
                 ${julkaiseNappi}
+                <details class="tulosta-dropdown">
+                    <summary class="tulosta-summary">🖨️ Tulosta</summary>
+                    <div class="tulosta-valikko">
+                        <button data-tulosta="tiimi">Koko tiimi</button>
+                        <button data-tulosta="lahto">Lähtöselvitys + satama</button>
+                    </div>
+                </details>
             </div>
             <div class="kuukausi-grid">
                 <div class="paiva-otsikko">Ma</div>
@@ -133,6 +144,14 @@ const ManagerView = {
         container.querySelectorAll('.paiva-solu[data-paiva]').forEach(solu => {
             solu.addEventListener('click', () => {
                 this.avaaPaivaEditori(solu.dataset.paiva, container);
+            });
+        });
+
+        // Tulostusvalikko
+        container.querySelectorAll('[data-tulosta]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.nykyinenNakyma = btn.dataset.tulosta === 'tiimi' ? 'tulosta-tiimi' : 'tulosta-lahto';
+                this.render(container);
             });
         });
 
@@ -1150,6 +1169,158 @@ const ManagerView = {
         const k = String(d.getMonth() + 1).padStart(2, '0');
         const p = String(d.getDate()).padStart(2, '0');
         return `${v}-${k}-${p}`;
+    },
+
+    // ===== Tulostusnäkymä =====
+    renderTulosta(container) {
+        const tyyppi = this.nykyinenNakyma === 'tulosta-tiimi' ? 'tiimi' : 'lahto';
+        const otsikko = tyyppi === 'tiimi'
+            ? 'Koko tiimi'
+            : 'Lähtöselvitys ja satamavastaavat';
+
+        const sisalto = tyyppi === 'tiimi'
+            ? this.tulostaTiimiHtml()
+            : this.tulostaLahtoHtml();
+
+        container.innerHTML = `
+            <div class="tulosta-toolbar ei-tulosteta">
+                <button id="takaisin-tulostuksesta">← Takaisin kalenteriin</button>
+                <button id="tulosta-nappi" class="ensisijainen">🖨️ Tulosta</button>
+            </div>
+
+            <div class="tuloste">
+                <header class="tuloste-otsikko">
+                    <img src="assets/finnlines-logo.svg" alt="Finnlines" class="tuloste-logo">
+                    <div>
+                        <h1>${otsikko}</h1>
+                        <p>${this.kuukaudenNimi(this.nykyinenKuukausi)} ${this.nykyinenVuosi}</p>
+                    </div>
+                </header>
+                ${sisalto}
+                <footer class="tuloste-footer">
+                    Finnlines vuorohallinta — tulostettu ${this.tanaanLuettava()}
+                </footer>
+            </div>
+        `;
+
+        document.getElementById('takaisin-tulostuksesta').addEventListener('click', () => {
+            this.nykyinenNakyma = 'kalenteri';
+            this.render(container);
+        });
+        document.getElementById('tulosta-nappi').addEventListener('click', () => {
+            window.print();
+        });
+    },
+
+    // Tiimin tuloste kalenterimuotona — kaikki vuorot
+    tulostaTiimiHtml() {
+        return this.tulostaKalenteriHtml('tiimi');
+    },
+
+    // Lähtöselvitys + satamavastaava -tuloste kalenterimuotona
+    tulostaLahtoHtml() {
+        return this.tulostaKalenteriHtml('lahto');
+    },
+
+    // Yhteinen kalenterirakenne tulosteille
+    tulostaKalenteriHtml(tyyppi) {
+        const vuosi = this.nykyinenVuosi;
+        const kk = this.nykyinenKuukausi;
+
+        // 6 riviä × 7 saraketta -ruudukko
+        const ensimmainen = new Date(vuosi, kk, 1);
+        const erotusMaanantaista = (ensimmainen.getDay() + 6) % 7;
+        const alku = new Date(vuosi, kk, 1 - erotusMaanantaista);
+
+        const otsikkoRivi = ['Maanantai','Tiistai','Keskiviikko','Torstai','Perjantai','Lauantai','Sunnuntai']
+            .map(p => `<div class="tuloste-paiva-otsikko">${p}</div>`).join('');
+
+        const solut = [];
+        for (let i = 0; i < 42; i++) {
+            const d = new Date(alku);
+            d.setDate(alku.getDate() + i);
+            solut.push(this.tulostaPaivaSoluHtml(d, tyyppi));
+        }
+
+        // Jätä viimeinen rivi pois jos kaikki solut sen rivillä ovat eri kuussa (kompakti A4)
+        // Tarkistetaan: ovatko viimeisen rivin (solut 35-41) kaikki eri kuussa?
+        const viimeinenRivi = [];
+        for (let i = 35; i < 42; i++) {
+            const d = new Date(alku);
+            d.setDate(alku.getDate() + i);
+            viimeinenRivi.push(d.getMonth() === kk);
+        }
+        const onkoViimRiviTyhja = !viimeinenRivi.some(x => x);
+        const naytaSolut = onkoViimRiviTyhja ? solut.slice(0, 35) : solut;
+
+        return `
+            <div class="tuloste-kalenteri">
+                <div class="tuloste-otsikkorivi">${otsikkoRivi}</div>
+                <div class="tuloste-ruudukko" style="grid-template-rows: repeat(${onkoViimRiviTyhja ? 5 : 6}, 1fr);">
+                    ${naytaSolut.join('')}
+                </div>
+                <div class="tuloste-selite">
+                    🏠 = Etänä &nbsp; 🛂 = Lähtöselvitys &nbsp; ⚠️ = Poikkeuspäivä
+                </div>
+            </div>
+        `;
+    },
+
+    tulostaPaivaSoluHtml(d, tyyppi) {
+        const iso = this.iso(d);
+        const onTassaKuussa = d.getMonth() === this.nykyinenKuukausi;
+        const onViikonloppu = d.getDay() === 0 || d.getDay() === 6;
+        const onPoikkeus = Exceptions.onkoPoikkeus(iso);
+
+        const luokat = ['tuloste-paiva'];
+        if (!onTassaKuussa) luokat.push('eri-kuukausi');
+        if (onViikonloppu) luokat.push('vkl');
+        if (onPoikkeus) luokat.push('poikkeus');
+
+        let vuorot = Shifts.paivalle(iso);
+        if (tyyppi === 'lahto') {
+            vuorot = vuorot.filter(v =>
+                v.lahtoselvitys ||
+                (v.vuorotyyppi || '').includes('lahtoselvitys') ||
+                v.vuorotyyppi === 'satamavastaava'
+            );
+        }
+
+        // Järjestys: rooli → aika
+        const rooliJarjestys = { esihenkilo: 1, asiakaspalvelu: 2, ryhmamyynti: 3, satamahenkilokunta: 4 };
+        vuorot.sort((a, b) => {
+            const ta = TYONTEKIJAT.find(x => x.id === a.tyontekijaId);
+            const tb = TYONTEKIJAT.find(x => x.id === b.tyontekijaId);
+            const ra = rooliJarjestys[ta?.rooli] || 99;
+            const rb = rooliJarjestys[tb?.rooli] || 99;
+            if (ra !== rb) return ra - rb;
+            const aa = Shifts.aika(a).alku;
+            const ab = Shifts.aika(b).alku;
+            return aa.localeCompare(ab);
+        });
+
+        const vuoroHtml = vuorot.map(v => {
+            const t = TYONTEKIJAT.find(x => x.id === v.tyontekijaId);
+            const aika = Shifts.aika(v);
+            const lyhytNimi = (t?.nimi || '?').split(' ')[0];
+            const merkit = (v.etana ? '🏠' : '') + (v.lahtoselvitys ? '🛂' : '');
+            const aikaTeksti = `${parseInt(aika.alku)}–${parseInt(aika.loppu)}`;
+            const rooliLuokka = `rooli-${t?.rooli || 'tuntematon'}`;
+            return `<div class="tuloste-vuoro ${rooliLuokka}"><span class="vuoro-nimi-tulo">${lyhytNimi}</span><span class="vuoro-aika-tulo">${aikaTeksti}</span>${merkit ? `<span class="vuoro-merkit">${merkit}</span>` : ''}</div>`;
+        }).join('');
+
+        const viikonpaiva = ['Su','Ma','Ti','Ke','To','Pe','La'][d.getDay()];
+        return `
+            <div class="${luokat.join(' ')}">
+                <div class="tuloste-paiva-numero">${d.getDate()}.${onPoikkeus ? ' ⚠️' : ''}</div>
+                ${vuoroHtml}
+            </div>
+        `;
+    },
+
+    tanaanLuettava() {
+        const d = new Date();
+        return `${d.getDate()}.${d.getMonth()+1}.${d.getFullYear()}`;
     },
 
     // Listaa kalenteriviikot (ISO) jotka ovat osittain tämän kuukauden sisällä

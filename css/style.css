@@ -1131,6 +1131,266 @@ input[type="time"].muokkaa-aika:focus {
     opacity: 0.25;
 }
 
+/* ===== Tulostus ===== */
+.tulosta-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.tulosta-summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 9px 16px;
+    background: var(--white);
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 500;
+    user-select: none;
+}
+.tulosta-summary::-webkit-details-marker { display: none; }
+.tulosta-summary:hover {
+    border-color: var(--navy);
+    background: var(--navy-50);
+}
+
+.tulosta-valikko {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 4px);
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-md);
+    padding: 4px;
+    z-index: 50;
+    min-width: 240px;
+}
+
+.tulosta-valikko button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: none;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink);
+    cursor: pointer;
+}
+.tulosta-valikko button:hover {
+    background: var(--navy-50);
+    color: var(--navy);
+}
+
+/* Tulostusnäkymä */
+.tulosta-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 0 0 16px;
+    padding: 12px 16px;
+    background: var(--ivory);
+    border-radius: var(--radius);
+    border: 1px solid var(--gold);
+}
+
+.tuloste {
+    background: var(--white);
+    padding: 32px 36px;
+    box-shadow: var(--shadow-md);
+    border-radius: var(--radius);
+    color: var(--ink);
+}
+
+.tuloste-otsikko {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding-bottom: 18px;
+    margin-bottom: 22px;
+    border-bottom: 2px solid var(--navy);
+}
+
+.tuloste-logo {
+    height: 36px;
+    width: auto;
+}
+
+.tuloste-otsikko h1 {
+    margin: 0;
+    color: var(--navy);
+    font-size: 1.6rem;
+}
+.tuloste-otsikko p {
+    margin: 2px 0 0;
+    color: var(--gray-700);
+    font-size: 1.05rem;
+}
+
+/* Kalenterimuotoinen tuloste */
+.tuloste-kalenteri {
+    width: 100%;
+}
+
+.tuloste-otsikkorivi {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+    background: var(--navy);
+    margin-bottom: 1px;
+}
+
+.tuloste-paiva-otsikko {
+    background: var(--navy);
+    color: var(--white);
+    padding: 6px 4px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.tuloste-ruudukko {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+    background: var(--gray-300);
+    border: 1px solid var(--gray-300);
+}
+
+.tuloste-paiva {
+    background: var(--white);
+    padding: 4px 5px;
+    min-height: 90px;
+    font-size: 10px;
+    line-height: 1.3;
+}
+
+.tuloste-paiva.eri-kuukausi {
+    background: var(--ivory);
+    color: var(--gray-500);
+}
+
+.tuloste-paiva.vkl:not(.eri-kuukausi) {
+    background: var(--navy-50);
+}
+
+.tuloste-paiva.poikkeus:not(.eri-kuukausi) {
+    background: var(--gold-100);
+}
+
+.tuloste-paiva-numero {
+    font-weight: 700;
+    font-size: 11px;
+    color: var(--navy);
+    margin-bottom: 3px;
+}
+
+.tuloste-paiva.eri-kuukausi .tuloste-paiva-numero {
+    color: var(--gray-400);
+}
+
+.tuloste-vuoro {
+    display: flex;
+    align-items: baseline;
+    gap: 3px;
+    padding: 1px 0;
+    font-size: 9.5px;
+    line-height: 1.25;
+    border-left: 2px solid transparent;
+    padding-left: 3px;
+}
+
+.vuoro-nimi-tulo {
+    font-weight: 500;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.vuoro-aika-tulo {
+    color: var(--gray-700);
+    font-family: ui-monospace, 'SF Mono', monospace;
+    font-size: 9px;
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+}
+
+.vuoro-merkit {
+    font-size: 9px;
+    flex-shrink: 0;
+}
+
+/* Värikoodaus rooleittain */
+.tuloste-vuoro.rooli-esihenkilo         { border-left-color: #B86200; }
+.tuloste-vuoro.rooli-asiakaspalvelu     { border-left-color: var(--navy); }
+.tuloste-vuoro.rooli-ryhmamyynti        { border-left-color: #2E7D5C; }
+.tuloste-vuoro.rooli-satamahenkilokunta { border-left-color: var(--coral); }
+
+.tuloste-selite {
+    margin-top: 12px;
+    padding: 8px 12px;
+    font-size: 11px;
+    color: var(--gray-700);
+    background: var(--ivory);
+    border-radius: var(--radius-sm);
+}
+
+.tuloste-footer {
+    margin-top: 24px;
+    padding-top: 12px;
+    border-top: 1px solid var(--gray-200);
+    color: var(--gray-500);
+    font-size: 11px;
+    text-align: center;
+}
+
+/* ===== @media print: piilota ei-tuloste-elementit ===== */
+@media print {
+    body {
+        background: white;
+        padding: 0;
+    }
+    #app {
+        max-width: none;
+        padding: 0;
+        margin: 0;
+        animation: none;
+    }
+    .topbar,
+    .nav,
+    .ei-tulosteta,
+    .tulosta-toolbar {
+        display: none !important;
+    }
+    .tuloste {
+        box-shadow: none;
+        padding: 0;
+        border-radius: 0;
+    }
+    .tuloste-paiva-otsikko,
+    .tuloste-paiva.vkl,
+    .tuloste-paiva.poikkeus,
+    .tuloste-paiva.eri-kuukausi,
+    .tuloste-vuoro {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    .tuloste-paiva {
+        min-height: 60px;
+        page-break-inside: avoid;
+    }
+    @page {
+        size: A4 landscape;
+        margin: 1cm;
+    }
+}
+
 .vuoro-tyyppi-merkki {
     font-size: 11px;
     color: var(--gray-500);
