@@ -2,7 +2,7 @@
 const ManagerView = {
     nykyinenVuosi: null,
     nykyinenKuukausi: null, // 0-11
-    nykyinenNakyma: 'kalenteri', // 'kalenteri' | 'lomat' | 'toiveet' | 'poikkeukset' | 'henkilosto'
+    nykyinenNakyma: 'tanaan', // 'tanaan' | 'kalenteri' | 'lomat' | 'toiveet' | 'poikkeukset' | 'henkilosto'
 
     render(container) {
         if (this.nykyinenVuosi === null) {
@@ -11,6 +11,10 @@ const ManagerView = {
             this.nykyinenKuukausi = tanaan.getMonth();
         }
 
+        if (this.nykyinenNakyma === 'tanaan') {
+            this.renderTanaan(container);
+            return;
+        }
         if (this.nykyinenNakyma === 'lomat') {
             this.renderLomat(container);
             return;
@@ -49,6 +53,7 @@ const ManagerView = {
                     <span class="brand-app-name">Vuorohallinta</span>
                 </div>
                 <nav class="nav">
+                    <button id="nakyma-tanaan">Tänään</button>
                     <button id="nakyma-kalenteri" class="ensisijainen">Kalenteri</button>
                     ${lomaNappi}
                     <button id="nakyma-toiveet">Toiveet${(() => { const n = Wishes.odottavat().length; return n > 0 ? ` (${n})` : ''; })()}</button>
@@ -164,6 +169,7 @@ const ManagerView = {
                     <span class="brand-app-name">Vuorohallinta</span>
                 </div>
                 <nav class="nav">
+                    <button id="nakyma-tanaan">Tänään</button>
                     <button id="nakyma-kalenteri">Kalenteri</button>
                     <button id="nakyma-lomat" class="ensisijainen">Lomapyynnöt</button>
                     <button id="nakyma-toiveet">Toiveet${(() => { const n = Wishes.odottavat().length; return n > 0 ? ` (${n})` : ''; })()}</button>
@@ -204,6 +210,10 @@ const ManagerView = {
         document.getElementById('logout').addEventListener('click', () => {
             Auth.logout();
             App.render();
+        });
+        document.getElementById('nakyma-tanaan').addEventListener('click', () => {
+            this.nykyinenNakyma = 'tanaan';
+            this.render(container);
         });
         document.getElementById('nakyma-kalenteri').addEventListener('click', () => {
             this.nykyinenNakyma = 'kalenteri';
@@ -272,6 +282,7 @@ const ManagerView = {
                     <span class="brand-app-name">Vuorohallinta</span>
                 </div>
                 <nav class="nav">
+                    <button id="nakyma-tanaan">Tänään</button>
                     <button id="nakyma-kalenteri">Kalenteri</button>
                     <button id="nakyma-lomat">Lomapyynnöt</button>
                     <button id="nakyma-toiveet" class="ensisijainen">Toiveet${odottavat.length > 0 ? ` (${odottavat.length})` : ''}</button>
@@ -367,6 +378,7 @@ const ManagerView = {
                     <span class="brand-app-name">Vuorohallinta</span>
                 </div>
                 <nav class="nav">
+                    <button id="nakyma-tanaan">Tänään</button>
                     <button id="nakyma-kalenteri">Kalenteri</button>
                     <button id="nakyma-lomat">Lomapyynnöt</button>
                     <button id="nakyma-toiveet">Toiveet${(() => { const n = Wishes.odottavat().length; return n > 0 ? ` (${n})` : ''; })()}</button>
@@ -598,6 +610,7 @@ const ManagerView = {
                     <span class="brand-app-name">Vuorohallinta</span>
                 </div>
                 <nav class="nav">
+                    <button id="nakyma-tanaan">Tänään</button>
                     <button id="nakyma-kalenteri">Kalenteri</button>
                     <button id="nakyma-lomat">Lomapyynnöt</button>
                     <button id="nakyma-toiveet">Toiveet${(() => { const n = Wishes.odottavat().length; return n > 0 ? ` (${n})` : ''; })()}</button>
@@ -951,6 +964,142 @@ const ManagerView = {
         const d = new Date(iso);
         const viikonpaivat = ['Sunnuntai','Maanantai','Tiistai','Keskiviikko','Torstai','Perjantai','Lauantai'];
         return `${viikonpaivat[d.getDay()]} ${d.getDate()}.${d.getMonth()+1}.${d.getFullYear()}`;
+    },
+
+    // ===== "Tänään"-näkymä — esimiehelle =====
+    renderTanaan(container) {
+        const odottavienMaara = Leave.odottavat().length;
+        const lomaNappi = `<button id="nakyma-lomat">Lomapyynnöt${odottavienMaara > 0 ? ` (${odottavienMaara})` : ''}</button>`;
+
+        container.innerHTML = `
+            <header class="topbar">
+                <div class="brand">
+                    <img src="assets/finnlines-logo.svg" alt="Finnlines">
+                    <div class="brand-divider"></div>
+                    <span class="brand-app-name">Vuorohallinta</span>
+                </div>
+                <nav class="nav">
+                    <button id="nakyma-tanaan" class="ensisijainen">Tänään</button>
+                    <button id="nakyma-kalenteri">Kalenteri</button>
+                    ${lomaNappi}
+                    <button id="nakyma-toiveet">Toiveet${(() => { const n = Wishes.odottavat().length; return n > 0 ? ` (${n})` : ''; })()}</button>
+                    <button id="nakyma-poikkeukset">Poikkeuspäivät</button>
+                    <button id="nakyma-henkilosto">Henkilöstö</button>
+                    <button id="logout">Kirjaudu ulos</button>
+                </nav>
+            </header>
+            ${this.tanaanSisaltoHtml(true)}
+        `;
+        this.kiinnitaYhteisetTapahtumat(container);
+    },
+
+    // Yhteinen sisältö Tänään-näkymälle. naytaPoissaolot=true → näytetään loma/sairas/ei-käytettävissä-listat (esimies)
+    tanaanSisaltoHtml(naytaPoissaolot) {
+        const tanaan = this.tanaanIso();
+        const d = new Date(tanaan);
+        const otsikko = this.muotoileIsoPvm(tanaan);
+
+        // Erityispiirteet
+        const onPoikkeus = Exceptions.onkoPoikkeus(tanaan);
+        const onViikonloppu = d.getDay() === 0 || d.getDay() === 6;
+        let erityisHtml = '';
+        if (onPoikkeus) {
+            const p = Exceptions.kaikki().find(x => x.paiva === tanaan);
+            erityisHtml = `<div class="erityisilmoitus erityis-poikkeus">⚠️ ${p?.kuvaus || 'Poikkeuspäivä'} — laiva ei lähde tänään</div>`;
+        } else if (onViikonloppu) {
+            erityisHtml = `<div class="erityisilmoitus erityis-vkl">📅 Viikonloppu — vain lähtöselvitys 12–15</div>`;
+        } else {
+            erityisHtml = `<div class="erityisilmoitus erityis-ok">✅ Normaali työpäivä</div>`;
+        }
+
+        // Vuorot ryhmiteltynä rooleittain
+        const vuorot = Shifts.paivalle(tanaan);
+        const ryhmat = [
+            { rooli: 'esihenkilo',         otsikko: 'Esihenkilö' },
+            { rooli: 'asiakaspalvelu',     otsikko: 'Asiakaspalvelu' },
+            { rooli: 'ryhmamyynti',        otsikko: 'Ryhmämyynti' },
+            { rooli: 'satamahenkilokunta', otsikko: 'Satamahenkilökunta' },
+        ];
+
+        const ryhmaHtml = ryhmat.map(r => {
+            const ryhmaVuorot = vuorot.filter(v => {
+                const tt = TYONTEKIJAT.find(x => x.id === v.tyontekijaId);
+                return tt?.rooli === r.rooli;
+            });
+            if (!ryhmaVuorot.length) return '';
+
+            const liHtml = ryhmaVuorot.map(v => {
+                const tt = TYONTEKIJAT.find(x => x.id === v.tyontekijaId);
+                const aika = Shifts.aika(v);
+                const etanaIko = v.etana ? '<span class="tanaan-merkki" title="Etänä">🏠</span>' : '';
+                const onLs = v.lahtoselvitys || (v.vuorotyyppi || '').includes('lahtoselvitys');
+                const lsIko = onLs ? '<span class="tanaan-merkki" title="Lähtöselvitys">🛂</span>' : '';
+                return `
+                    <li>
+                        <span class="tanaan-nimi">${tt?.nimi || '? (poistettu)'}</span>
+                        <span class="tanaan-aika">${aika.alku}–${aika.loppu}</span>
+                        ${etanaIko}${lsIko}
+                    </li>
+                `;
+            }).join('');
+
+            return `
+                <div class="tanaan-rooli">
+                    <h3>${r.otsikko} <span class="lkm">(${ryhmaVuorot.length})</span></h3>
+                    <ul class="tanaan-lista">${liHtml}</ul>
+                </div>
+            `;
+        }).join('');
+
+        // Poissa-osio (vain esimiehelle)
+        let poissaHtml = '';
+        if (naytaPoissaolot) {
+            const lomalla = TYONTEKIJAT.filter(t => Leave.kaikki().some(l =>
+                l.tyontekijaId === t.id && l.tyyppi === 'loma' &&
+                l.tila === 'hyvaksytty' && l.alku <= tanaan && tanaan <= l.loppu
+            ));
+            const sairaat = TYONTEKIJAT.filter(t => Leave.kaikki().some(l =>
+                l.tyontekijaId === t.id && l.tyyppi === 'sairas' &&
+                l.alku <= tanaan && tanaan <= l.loppu
+            ));
+            const eiKaytettavissa = TYONTEKIJAT.filter(t => Wishes.onkoEiKaytettavissa(t.id, tanaan));
+
+            const yhteensa = lomalla.length + sairaat.length + eiKaytettavissa.length;
+            const lista = (otsikko, ikoni, kuka) => kuka.length
+                ? `<div class="poissa-ryhma"><h3>${ikoni} ${otsikko} (${kuka.length})</h3><ul class="tanaan-lista">${kuka.map(t => `<li><span class="tanaan-nimi">${t.nimi}</span></li>`).join('')}</ul></div>`
+                : '';
+
+            poissaHtml = `
+                <section class="yhteenveto-osio poissa-osio">
+                    <h2>Poissa tänään ${yhteensa > 0 ? `<span class="lkm">(${yhteensa})</span>` : ''}</h2>
+                    ${yhteensa === 0 ? '<p class="muted">Kaikki ovat käytettävissä.</p>' : ''}
+                    ${lista('Lomalla', '🏖️', lomalla)}
+                    ${lista('Sairaslomalla', '🤒', sairaat)}
+                    ${lista('Ei käytettävissä', '🔴', eiKaytettavissa)}
+                </section>
+            `;
+        }
+
+        return `
+            <div class="page-header">
+                <h1>Tänään</h1>
+                <p class="muted">${otsikko}</p>
+            </div>
+            ${erityisHtml}
+            <section class="yhteenveto-osio tanaan-osio">
+                <h2>Töissä tänään ${vuorot.length > 0 ? `<span class="lkm">(${vuorot.length})</span>` : ''}</h2>
+                ${ryhmaHtml || '<p class="muted">Ei vuoroja tänään.</p>'}
+            </section>
+            ${poissaHtml}
+        `;
+    },
+
+    tanaanIso() {
+        const d = new Date();
+        const v = d.getFullYear();
+        const k = String(d.getMonth() + 1).padStart(2, '0');
+        const p = String(d.getDate()).padStart(2, '0');
+        return `${v}-${k}-${p}`;
     },
 
     // Listaa kalenteriviikot (ISO) jotka ovat osittain tämän kuukauden sisällä

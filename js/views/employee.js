@@ -2,12 +2,18 @@
 const EmployeeView = {
     nykyinenVuosi: null,
     nykyinenKuukausi: null,
+    nykyinenNakyma: 'tanaan', // 'tanaan' | 'kalenteri'
 
     render(container) {
         if (this.nykyinenVuosi === null) {
             const tanaan = new Date();
             this.nykyinenVuosi = tanaan.getFullYear();
             this.nykyinenKuukausi = tanaan.getMonth();
+        }
+
+        if (this.nykyinenNakyma === 'tanaan') {
+            this.renderTanaan(container);
+            return;
         }
 
         const user = Auth.getCurrentUser();
@@ -59,6 +65,8 @@ const EmployeeView = {
                     <span class="brand-app-name">Vuorohallinta</span>
                 </div>
                 <nav class="nav">
+                    <button id="nakyma-tanaan">Tänään</button>
+                    <button id="nakyma-kalenteri" class="ensisijainen">Oma kalenteri</button>
                     <span class="user-chip">${user.nimi}</span>
                     <button id="logout">Kirjaudu ulos</button>
                 </nav>
@@ -122,6 +130,14 @@ const EmployeeView = {
         document.getElementById('logout').addEventListener('click', () => {
             Auth.logout();
             App.render();
+        });
+        document.getElementById('nakyma-tanaan').addEventListener('click', () => {
+            this.nykyinenNakyma = 'tanaan';
+            this.render(container);
+        });
+        document.getElementById('nakyma-kalenteri').addEventListener('click', () => {
+            this.nykyinenNakyma = 'kalenteri';
+            this.render(container);
         });
         document.getElementById('edellinen').addEventListener('click', () => {
             this.siirry(-1);
@@ -272,6 +288,40 @@ const EmployeeView = {
             ryhmamyynti: 'Ryhmämyynti',
             satamahenkilokunta: 'Satamahenkilökunta',
         })[rooli] || rooli;
+    },
+
+    // ===== "Tänään"-näkymä — työntekijälle =====
+    renderTanaan(container) {
+        const user = Auth.getCurrentUser();
+        container.innerHTML = `
+            <header class="topbar">
+                <div class="brand">
+                    <img src="assets/finnlines-logo.svg" alt="Finnlines">
+                    <div class="brand-divider"></div>
+                    <span class="brand-app-name">Vuorohallinta</span>
+                </div>
+                <nav class="nav">
+                    <button id="nakyma-tanaan" class="ensisijainen">Tänään</button>
+                    <button id="nakyma-kalenteri">Oma kalenteri</button>
+                    <span class="user-chip">${user.nimi}</span>
+                    <button id="logout">Kirjaudu ulos</button>
+                </nav>
+            </header>
+            ${ManagerView.tanaanSisaltoHtml(false)}
+        `;
+
+        document.getElementById('logout').addEventListener('click', () => {
+            Auth.logout();
+            App.render();
+        });
+        document.getElementById('nakyma-tanaan').addEventListener('click', () => {
+            this.nykyinenNakyma = 'tanaan';
+            this.render(container);
+        });
+        document.getElementById('nakyma-kalenteri').addEventListener('click', () => {
+            this.nykyinenNakyma = 'kalenteri';
+            this.render(container);
+        });
     },
 
     omatTunnitHtml(user) {

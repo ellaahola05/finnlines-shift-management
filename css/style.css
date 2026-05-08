@@ -982,6 +982,83 @@ input[type="time"].muokkaa-aika:focus {
     padding: 2px 6px;
 }
 
+/* ===== Tänään-näkymä ===== */
+.erityisilmoitus {
+    padding: 12px 16px;
+    border-radius: var(--radius);
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 16px;
+    border: 1px solid;
+}
+.erityis-ok       { background: var(--success-bg); color: var(--success-fg); border-color: rgba(20,83,45,0.15); }
+.erityis-vkl      { background: var(--navy-50);    color: var(--navy);       border-color: var(--navy-100); }
+.erityis-poikkeus { background: var(--gold-100);   color: #7A5C00;           border-color: var(--gold); }
+
+.tanaan-rooli {
+    margin-bottom: 18px;
+}
+.tanaan-rooli h3 {
+    color: var(--navy);
+    margin: 0 0 8px 0;
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+}
+
+.tanaan-lista {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 6px;
+}
+
+.tanaan-lista li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: var(--ivory);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+}
+
+.tanaan-nimi {
+    flex: 1;
+    font-weight: 500;
+    color: var(--ink);
+}
+
+.tanaan-aika {
+    font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    font-size: 13px;
+    color: var(--gray-700);
+    font-variant-numeric: tabular-nums;
+}
+
+.tanaan-merkki {
+    font-size: 14px;
+    line-height: 1;
+}
+
+.poissa-osio {
+    background: var(--ivory);
+}
+
+.poissa-ryhma {
+    margin-top: 12px;
+}
+
+.poissa-ryhma h3 {
+    margin: 0 0 8px 0;
+    font-size: 0.9rem;
+    color: var(--gray-700);
+}
+
 .vuoro-tyyppi-merkki {
     font-size: 11px;
     color: var(--gray-500);
