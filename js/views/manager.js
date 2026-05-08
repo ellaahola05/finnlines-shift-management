@@ -3,6 +3,7 @@ const ManagerView = {
     nykyinenVuosi: null,
     nykyinenKuukausi: null, // 0-11
     nykyinenNakyma: 'tanaan', // 'tanaan' | 'kalenteri' | 'lomat' | 'toiveet' | 'poikkeukset' | 'henkilosto'
+    hakuSana: '',
 
     render(container) {
         if (this.nykyinenVuosi === null) {
@@ -65,6 +66,11 @@ const ManagerView = {
             <div class="page-header">
                 <h1>Esihenkilön näkymä</h1>
                 <p class="muted">Suunnittele ja julkaise kuukauden vuorot.</p>
+            </div>
+            <div class="haku-rivi">
+                <input type="text" id="haku-kentta" placeholder="🔍 Etsi työntekijää nimellä..." value="${this.hakuSana || ''}">
+                ${this.hakuSana ? '<button id="haku-tyhjenna" class="haku-tyhjenna">Tyhjennä</button>' : ''}
+                <div id="haku-yhteenveto" class="haku-yhteenveto">${this.hakuYhteenvetoHtml()}</div>
             </div>
             <div class="kuukausi-nav">
                 <button id="edellinen">← Edellinen kuukausi</button>
@@ -129,6 +135,44 @@ const ManagerView = {
                 this.avaaPaivaEditori(solu.dataset.paiva, container);
             });
         });
+
+        // Hakukenttä: kirjoittaminen päivittää korostuksen, säilyttää fokuksen
+        const hakuInput = document.getElementById('haku-kentta');
+        if (hakuInput) {
+            hakuInput.addEventListener('input', (e) => {
+                this.hakuSana = e.target.value;
+                const pos = e.target.selectionStart;
+                this.render(container);
+                const uusi = document.getElementById('haku-kentta');
+                if (uusi) {
+                    uusi.focus();
+                    uusi.setSelectionRange(pos, pos);
+                }
+            });
+        }
+        const tyhjennaBtn = document.getElementById('haku-tyhjenna');
+        if (tyhjennaBtn) {
+            tyhjennaBtn.addEventListener('click', () => {
+                this.hakuSana = '';
+                this.render(container);
+            });
+        }
+    },
+
+    hakuYhteenvetoHtml() {
+        const haku = (this.hakuSana || '').trim().toLowerCase();
+        if (!haku) return '';
+        const osumat = TYONTEKIJAT.filter(t => t.nimi.toLowerCase().includes(haku));
+        if (!osumat.length) return '<span class="muted">Ei osumia.</span>';
+
+        return osumat.map(t => {
+            const data = Shifts.tunnitKuukaudessa(t.id, this.nykyinenVuosi, this.nykyinenKuukausi);
+            const vuoroMaara = Shifts.tyontekijalle(t.id).filter(v => {
+                const d = new Date(v.paiva);
+                return d.getFullYear() === this.nykyinenVuosi && d.getMonth() === this.nykyinenKuukausi;
+            }).length;
+            return `<span class="haku-tulos"><strong>${t.nimi}</strong> — ${vuoroMaara} vuoroa, ${this.muotoileTunnit(data.yhteensa)} h</span>`;
+        }).join('');
     },
 
     renderLomat(container) {
@@ -673,6 +717,7 @@ const ManagerView = {
         const onViikonloppu = d.getDay() === 0 || d.getDay() === 6;
         const onPoikkeus = Exceptions.onkoPoikkeus(iso);
 
+        const haku = (this.hakuSana || '').trim().toLowerCase();
         const vuorot = Shifts.paivalle(iso);
         const vuoroHtml = vuorot.map(v => {
             const tyontekija = TYONTEKIJAT.find(t => t.id === v.tyontekijaId);
@@ -683,7 +728,12 @@ const ManagerView = {
             const onLahtoselvitys = v.lahtoselvitys || (v.vuorotyyppi || '').includes('lahtoselvitys');
             const lsMerkki = onLahtoselvitys ? '<span class="ls-merkki" title="Lähtöselvitys">🛂</span>' : '';
             const titleText = `${tyontekija?.nimi || '?'} — ${aika.alku}–${aika.loppu}${v.lukittu ? ' (lukittu)' : ''}${v.etana ? ' (etänä)' : ''}${onLahtoselvitys ? ' (lähtöselvitys)' : ''}`;
-            return `<li class="${v.lukittu ? 'lukittu-vuoro' : ''}${v.etana ? ' etana-vuoro' : ''}" title="${titleText}">${lukko}${etanaMerkki}${lyhytNimi}${lsMerkki}</li>`;
+            const onOsuma = haku && tyontekija?.nimi.toLowerCase().includes(haku);
+            const luokat = [];
+            if (v.lukittu) luokat.push('lukittu-vuoro');
+            if (v.etana) luokat.push('etana-vuoro');
+            if (haku) luokat.push(onOsuma ? 'haku-osuma' : 'haku-himmea');
+            return `<li class="${luokat.join(' ')}" title="${titleText}">${lukko}${etanaMerkki}${lyhytNimi}${lsMerkki}</li>`;
         }).join('');
 
         const luokat = ['paiva-solu', 'klikattava'];

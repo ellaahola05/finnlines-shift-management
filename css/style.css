@@ -1059,6 +1059,78 @@ input[type="time"].muokkaa-aika:focus {
     color: var(--gray-700);
 }
 
+/* ===== Haku ===== */
+.haku-rivi {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 16px 0 8px;
+    padding: 12px 14px;
+    background: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+}
+
+#haku-kentta {
+    flex: 1;
+    min-width: 220px;
+    font-family: inherit;
+    font-size: 14px;
+    padding: 9px 12px;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-sm);
+    background: var(--white);
+    color: var(--ink);
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+#haku-kentta:focus {
+    outline: none;
+    border-color: var(--navy);
+    box-shadow: 0 0 0 3px var(--navy-100);
+}
+
+.haku-tyhjenna {
+    background: var(--white);
+    border: 1px solid var(--gray-300);
+    color: var(--gray-700);
+}
+.haku-tyhjenna:hover {
+    border-color: var(--coral);
+    color: var(--coral);
+}
+
+.haku-yhteenveto {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    flex-basis: 100%;
+}
+
+.haku-tulos {
+    background: #FFF3CD;
+    color: #6F4D00;
+    padding: 6px 12px;
+    border-radius: var(--radius-pill);
+    font-size: 13px;
+    border: 1px solid #F0DBA5;
+}
+
+/* Korostus kalenterissa kun haku aktiivinen */
+.paiva-solu li.haku-osuma {
+    background: #FFF3CD !important;
+    color: #5C3A00 !important;
+    border-color: #F0B400 !important;
+    box-shadow: 0 0 0 2px #FFD54F;
+    font-weight: 600;
+    z-index: 1;
+    position: relative;
+}
+
+.paiva-solu li.haku-himmea {
+    opacity: 0.25;
+}
+
 .vuoro-tyyppi-merkki {
     font-size: 11px;
     color: var(--gray-500);
