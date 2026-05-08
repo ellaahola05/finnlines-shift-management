@@ -8,6 +8,11 @@
 const KOKOAIK = { viikkotunnit: 37.5 };
 const TUNTI   = { viikkotunnit: 37.5, viikkotunnitMin: 20 };
 
+// Etätyö-asetukset:
+//   'ei'   — ei tee etätöitä (oletus)
+//   'voi'  — voi tehdä etätöitä joinakin päivinä (valitsee toiveissa)
+//   'aina' — kaikki vuorot tehdään etänä
+
 const TYONTEKIJAT = [
     // Esihenkilö
     { id: 1, nimi: 'Esihenkilö Esimerkki', rooli: 'esihenkilo', tyyppi: 'vakituinen', sopimus: KOKOAIK },
@@ -68,6 +73,13 @@ const TYYPPI_NIMI = {
     vakituinen:     'Vakituinen',
     maaraaikainen:  'Määräaikainen',
     kesatyontekija: 'Kesätyöntekijä',
+};
+
+// Etätyö-asetuksen nimi ja ikoni
+const ETATYO_NIMI = {
+    ei:   { nimi: 'Ei etänä',         ikoni: '🚫' },
+    voi:  { nimi: 'Voi olla etänä',   ikoni: '🏠' },
+    aina: { nimi: 'Aina etänä',       ikoni: '🌐' },
 };
 
 // Hyväksyntäsääntö: tarvitseeko tämän työntekijän poissaolo esimiehen hyväksyntää?

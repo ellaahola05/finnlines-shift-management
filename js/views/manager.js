@@ -232,7 +232,8 @@ const ManagerView = {
         const toiveRivi = (w, naytaNapit) => {
             const t = TYONTEKIJAT.find(x => x.id === w.tyontekijaId);
             const ikoni = w.tyyppi === 'ei_kaytettavissa' ? '🔴' :
-                          w.tyyppi === 'toivoo_toita' ? '🟢' : '💬';
+                          w.tyyppi === 'toivoo_toita' ? '🟢' :
+                          w.tyyppi === 'etana' ? '🏠' : '💬';
             const tyyppiNimi = TOIVE_TYYPPI_NIMI[w.tyyppi] || w.tyyppi;
             const kommentti = w.kommentti ? ` <em class="kommentti">"${w.kommentti}"</em>` : '';
             const tilaMerkki = `<span class="tila tila-${w.tila}">${EmployeeView.tilanNimi(w.tila)}</span>`;
@@ -325,6 +326,11 @@ const ManagerView = {
                     const sopimusTeksti = (sop.viikkotunnitMin && sop.viikkotunnitMin < sop.viikkotunnit)
                         ? `${sop.viikkotunnitMin}–${sop.viikkotunnit} h/vko`
                         : `${sop.viikkotunnit} h/vko`;
+                    const etatyo = t.etatyo || 'ei';
+                    const etatyoMerkki = etatyo === 'ei'
+                        ? ''
+                        : `<span class="etatyo-merkki etatyo-${etatyo}" title="${ETATYO_NIMI[etatyo].nimi}">${ETATYO_NIMI[etatyo].ikoni} ${ETATYO_NIMI[etatyo].nimi}</span>`;
+                    const muokkaaNappi = `<button data-id="${t.id}" class="muokkaa-tt">Muokkaa</button>`;
                     const poistoNappi = Employees.onkoEsihenkilo(t.id)
                         ? '<span class="lukko" title="Esihenkilöä ei voi poistaa">🔒</span>'
                         : `<button data-id="${t.id}" class="hylkaa poista-tt">Poista</button>`;
@@ -334,8 +340,12 @@ const ManagerView = {
                                 <strong>${t.nimi}</strong>
                                 <span class="tila tila-info">${tyyppiNimi}</span>
                                 <span class="sopimus-info">${sopimusTeksti}</span>
+                                ${etatyoMerkki}
                             </div>
-                            ${poistoNappi}
+                            <div class="tt-napit">
+                                ${muokkaaNappi}
+                                ${poistoNappi}
+                            </div>
                         </li>
                     `;
                 }).join('')
@@ -387,6 +397,13 @@ const ManagerView = {
                 </label>
                 <label id="label-min" style="display:none">Vähintään h/vko: <input type="number" id="uusi-viikkotunnit-min" value="20" min="0" max="60" step="0.5"></label>
                 <label>Enintään h/vko: <input type="number" id="uusi-viikkotunnit" value="37.5" min="0" max="60" step="0.5" required></label>
+                <label>Etätyö:
+                    <select id="uusi-etatyo" required>
+                        <option value="ei">🚫 Ei etänä</option>
+                        <option value="voi">🏠 Voi olla etänä</option>
+                        <option value="aina">🌐 Aina etänä</option>
+                    </select>
+                </label>
                 <button type="submit" class="ensisijainen">Lisää</button>
             </form>
 
@@ -421,6 +438,7 @@ const ManagerView = {
             const nimi = document.getElementById('uusi-nimi').value.trim();
             const rooli = document.getElementById('uusi-rooli').value;
             const tyyppi = document.getElementById('uusi-tyyppi').value;
+            const etatyo = document.getElementById('uusi-etatyo').value;
             const viikkotunnit = parseFloat(tunnitInput.value) || 0;
             if (!nimi) return;
             const sopimus = { viikkotunnit };
@@ -430,7 +448,7 @@ const ManagerView = {
                     sopimus.viikkotunnitMin = min;
                 }
             }
-            Employees.lisaa(nimi, rooli, tyyppi, sopimus);
+            Employees.lisaa(nimi, rooli, tyyppi, sopimus, etatyo);
             this.render(container);
         });
 
@@ -444,6 +462,117 @@ const ManagerView = {
                     this.render(container);
                 }
             });
+        });
+
+        // Muokkaa-nappi avaa työntekijän muokkausmodaalin
+        container.querySelectorAll('.muokkaa-tt').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = parseInt(btn.dataset.id, 10);
+                this.avaaTyontekijaEditori(id, container);
+            });
+        });
+    },
+
+    // ===== Työntekijän muokkausmodaali =====
+    avaaTyontekijaEditori(tyontekijaId, parentContainer) {
+        const t = TYONTEKIJAT.find(x => x.id === tyontekijaId);
+        if (!t) return;
+
+        const sop = t.sopimus || { viikkotunnit: 37.5 };
+        const onEsihenkilo = Employees.onkoEsihenkilo(t.id);
+
+        const modaali = document.createElement('div');
+        modaali.className = 'modaali-tausta';
+        document.body.appendChild(modaali);
+
+        const sulje = () => {
+            modaali.remove();
+            this.render(parentContainer);
+        };
+
+        // Roolin valinta — esihenkilölle lukittu
+        const rooliOptionit = [
+            { v: 'asiakaspalvelu',     n: 'Asiakaspalvelu' },
+            { v: 'ryhmamyynti',        n: 'Ryhmämyynti' },
+            { v: 'satamahenkilokunta', n: 'Satamahenkilökunta' },
+        ];
+        const rooliHtml = onEsihenkilo
+            ? `<input type="text" id="muokkaa-rooli" value="Esihenkilö" disabled>`
+            : `<select id="muokkaa-rooli">${rooliOptionit.map(o =>
+                `<option value="${o.v}"${t.rooli === o.v ? ' selected' : ''}>${o.n}</option>`).join('')}</select>`;
+
+        modaali.innerHTML = `
+            <div class="modaali" role="dialog">
+                <header class="modaali-header">
+                    <h2>Muokkaa: ${t.nimi}</h2>
+                    <button class="sulje-modaali" title="Sulje">×</button>
+                </header>
+
+                <form id="muokkaa-lomake" class="muokkaa-lomake">
+                    <label>Nimi: <input type="text" id="muokkaa-nimi" value="${t.nimi}" required></label>
+                    <label>Rooli: ${rooliHtml}</label>
+                    <label>Tyyppi:
+                        <select id="muokkaa-tyyppi" ${onEsihenkilo ? 'disabled' : ''}>
+                            <option value="vakituinen"${t.tyyppi==='vakituinen'?' selected':''}>Vakituinen</option>
+                            <option value="maaraaikainen"${t.tyyppi==='maaraaikainen'?' selected':''}>Määräaikainen</option>
+                            <option value="kesatyontekija"${t.tyyppi==='kesatyontekija'?' selected':''}>Kesätyöntekijä</option>
+                        </select>
+                    </label>
+                    <label id="muokkaa-label-min" style="${(sop.viikkotunnitMin && t.tyyppi !== 'vakituinen') ? '' : 'display:none'}">
+                        Vähintään h/vko:
+                        <input type="number" id="muokkaa-viikkotunnit-min" value="${sop.viikkotunnitMin || 20}" min="0" max="60" step="0.5">
+                    </label>
+                    <label>Enintään h/vko:
+                        <input type="number" id="muokkaa-viikkotunnit" value="${sop.viikkotunnit}" min="0" max="60" step="0.5" required>
+                    </label>
+                    <label>Etätyö:
+                        <select id="muokkaa-etatyo">
+                            <option value="ei"${(t.etatyo||'ei')==='ei'?' selected':''}>🚫 Ei etänä</option>
+                            <option value="voi"${t.etatyo==='voi'?' selected':''}>🏠 Voi olla etänä</option>
+                            <option value="aina"${t.etatyo==='aina'?' selected':''}>🌐 Aina etänä</option>
+                        </select>
+                    </label>
+                    <div class="muokkaa-napit">
+                        <button type="button" class="peruuta-modaali">Peruuta</button>
+                        <button type="submit" class="ensisijainen">Tallenna muutokset</button>
+                    </div>
+                </form>
+            </div>
+        `;
+
+        modaali.addEventListener('click', (e) => { if (e.target === modaali) sulje(); });
+        modaali.querySelector('.sulje-modaali').addEventListener('click', sulje);
+        modaali.querySelector('.peruuta-modaali').addEventListener('click', sulje);
+
+        // Tyypin vaihtaminen näyttää/piilottaa min-tuntikentän
+        const tyyppiSel = modaali.querySelector('#muokkaa-tyyppi');
+        const labelMin = modaali.querySelector('#muokkaa-label-min');
+        if (tyyppiSel) {
+            tyyppiSel.addEventListener('change', () => {
+                labelMin.style.display = tyyppiSel.value === 'vakituinen' ? 'none' : '';
+            });
+        }
+
+        modaali.querySelector('#muokkaa-lomake').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const paivitykset = {
+                nimi: modaali.querySelector('#muokkaa-nimi').value.trim(),
+                etatyo: modaali.querySelector('#muokkaa-etatyo').value,
+            };
+            if (!onEsihenkilo) {
+                paivitykset.rooli = modaali.querySelector('#muokkaa-rooli').value;
+                paivitykset.tyyppi = modaali.querySelector('#muokkaa-tyyppi').value;
+            }
+            const max = parseFloat(modaali.querySelector('#muokkaa-viikkotunnit').value) || 0;
+            const min = parseFloat(modaali.querySelector('#muokkaa-viikkotunnit-min').value);
+            const sopimus = { viikkotunnit: max };
+            const tyyppi = paivitykset.tyyppi || t.tyyppi;
+            if (tyyppi !== 'vakituinen' && !isNaN(min) && min > 0 && min < max) {
+                sopimus.viikkotunnitMin = min;
+            }
+            paivitykset.sopimus = sopimus;
+            Employees.paivita(t.id, paivitykset);
+            sulje();
         });
     },
 
@@ -535,7 +664,9 @@ const ManagerView = {
             const aika = Shifts.aika(v);
             const lyhytNimi = tyontekija?.nimi.split(' ')[0] || '?';
             const lukko = v.lukittu ? '<span class="lukko-merkki" title="Lukittu">🔒</span>' : '';
-            return `<li class="${v.lukittu ? 'lukittu-vuoro' : ''}" title="${tyontekija?.nimi || '?'} — ${aika.alku}–${aika.loppu}${v.lukittu ? ' (lukittu)' : ''}">${lukko}${lyhytNimi}</li>`;
+            const etanaMerkki = v.etana ? '<span class="etana-merkki" title="Etänä">🏠</span>' : '';
+            const titleText = `${tyontekija?.nimi || '?'} — ${aika.alku}–${aika.loppu}${v.lukittu ? ' (lukittu)' : ''}${v.etana ? ' (etänä)' : ''}`;
+            return `<li class="${v.lukittu ? 'lukittu-vuoro' : ''}${v.etana ? ' etana-vuoro' : ''}" title="${titleText}">${lukko}${etanaMerkki}${lyhytNimi}</li>`;
         }).join('');
 
         const luokat = ['paiva-solu', 'klikattava'];
@@ -607,9 +738,17 @@ const ManagerView = {
                     const lukkoNappi = v.lukittu
                         ? `<button data-id="${v.id}" class="lukko-nappi lukittu" title="Lukittu — ei muutu uudelleenluonnissa. Klikkaa avataksesi lukon.">🔒</button>`
                         : `<button data-id="${v.id}" class="lukko-nappi" title="Avoinna — voi vaihtua uudelleenluonnissa. Klikkaa lukitaksesi.">🔓</button>`;
+                    // Etätyö-toggle: lähtöselvitys-vuoroissa ei tarjota
+                    const onLahtoselvitys = v.vuorotyyppi.includes('lahtoselvitys');
+                    const etanaNappi = onLahtoselvitys
+                        ? ''
+                        : v.etana
+                            ? `<button data-id="${v.id}" class="etana-nappi etana-aktiivinen" title="Etänä — klikkaa vaihtaaksesi paikan päälle">🏠</button>`
+                            : `<button data-id="${v.id}" class="etana-nappi" title="Paikan päällä — klikkaa vaihtaaksesi etänä">🏢</button>`;
                     return `
-                        <li class="${v.lukittu ? 'vuoro-lukittu' : ''}">
+                        <li class="${v.lukittu ? 'vuoro-lukittu' : ''}${v.etana ? ' vuoro-etana' : ''}">
                             ${lukkoNappi}
+                            ${etanaNappi}
                             <strong>${t?.nimi || '? (poistettu työntekijä)'}</strong>
                             <span class="vuoro-aika-muokkaus">
                                 <input type="time" data-id="${v.id}" data-kentta="alku"  value="${aika.alku}"  class="muokkaa-aika">
@@ -689,6 +828,17 @@ const ManagerView = {
                     const v = Shifts.kaikki().find(x => x.id === id);
                     if (!v) return;
                     Shifts.paivita(id, { lukittu: !v.lukittu });
+                    renderModaali();
+                });
+            });
+
+            // Etätyön vaihto — lukitaan automaattisesti, jotta säilyy uudelleenluonnissa
+            modaali.querySelectorAll('.etana-nappi').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const id = parseFloat(btn.dataset.id);
+                    const v = Shifts.kaikki().find(x => x.id === id);
+                    if (!v) return;
+                    Shifts.paivita(id, { etana: !v.etana, lukittu: true });
                     renderModaali();
                 });
             });

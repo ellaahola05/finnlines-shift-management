@@ -35,7 +35,8 @@ const EmployeeView = {
             ? omatToiveet.map(w => {
                 const tyyppiNimi = TOIVE_TYYPPI_NIMI[w.tyyppi] || w.tyyppi;
                 const ikoni = w.tyyppi === 'ei_kaytettavissa' ? '🔴' :
-                              w.tyyppi === 'toivoo_toita' ? '🟢' : '💬';
+                              w.tyyppi === 'toivoo_toita' ? '🟢' :
+                              w.tyyppi === 'etana' ? '🏠' : '💬';
                 const kommentti = w.kommentti ? ` <em class="kommentti">"${w.kommentti}"</em>` : '';
                 return `
                     <li>
@@ -104,6 +105,7 @@ const EmployeeView = {
                     <select id="toive-tyyppi" required>
                         <option value="ei_kaytettavissa">🔴 En käytettävissä</option>
                         <option value="toivoo_toita">🟢 Toivon töitä</option>
+                        ${user.etatyo === 'voi' ? '<option value="etana">🏠 Olen etänä</option>' : ''}
                         <option value="muu">💬 Muu toive</option>
                     </select>
                 </label>
@@ -213,7 +215,8 @@ const EmployeeView = {
         } else if (omatVuorot.length > 0) {
             sisaltoHtml = omatVuorot.map(v => {
                 const a = Shifts.aika(v);
-                return `<div class="merkki">${a.alku}–${a.loppu}</div>`;
+                const etanaIko = v.etana ? '🏠 ' : '';
+                return `<div class="merkki">${etanaIko}${a.alku}–${a.loppu}</div>`;
             }).join('');
         }
 

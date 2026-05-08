@@ -52,6 +52,7 @@ const Wishes = {
     aloitusTila(tyontekija, tyyppi, alku, loppu) {
         if (!tyontekija) return 'odottaa';
         if (tyyppi === 'toivoo_toita') return 'hyvaksytty';
+        if (tyyppi === 'etana')        return 'hyvaksytty'; // etätyötoiveet ovat aina suoraan voimassa
         if (tyyppi === 'muu') return 'odottaa';
 
         // tyyppi === 'ei_kaytettavissa'
@@ -132,10 +133,21 @@ const Wishes = {
             r.alku <= paivaIso && paivaIso <= r.loppu
         );
     },
+
+    // Onko työntekijä toivonut etätyötä tälle päivälle?
+    toivooEtana(tyontekijaId, paivaIso) {
+        return this.kaikki().some(r =>
+            r.tyontekijaId === tyontekijaId &&
+            r.tyyppi === 'etana' &&
+            r.tila === 'hyvaksytty' &&
+            r.alku <= paivaIso && paivaIso <= r.loppu
+        );
+    },
 };
 
 const TOIVE_TYYPPI_NIMI = {
     ei_kaytettavissa: 'En käytettävissä',
     toivoo_toita:     'Toivon töitä',
+    etana:            'Olen etänä',
     muu:              'Muu toive',
 };

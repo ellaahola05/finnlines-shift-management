@@ -628,6 +628,113 @@ input[type="time"].muokkaa-aika:focus {
     border-color: var(--navy);
 }
 
+/* ===== Etätyö ===== */
+.etana-nappi {
+    background: transparent;
+    border: 1px solid var(--gray-300);
+    padding: 4px 8px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+.etana-nappi.etana-aktiivinen {
+    background: #E8F4F0;
+    border-color: #2E7D5C;
+}
+.etana-nappi:hover {
+    background: var(--gray-100);
+}
+
+.etana-merkki {
+    font-size: 9px;
+    margin-right: 2px;
+    opacity: 0.75;
+}
+
+.paiva-solu li.etana-vuoro {
+    background: #E8F4F0;
+    border-color: #5BA77F;
+}
+
+.vuoro-etana {
+    background: #F4FAF7 !important;
+    border-left: 3px solid #2E7D5C !important;
+}
+
+.etatyo-merkki {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 10px;
+    border-radius: var(--radius-pill);
+    border: 1px solid;
+    white-space: nowrap;
+}
+.etatyo-voi  { background: #E8F4F0; color: #2E5E47; border-color: #B8D9C9; }
+.etatyo-aina { background: #DFEAF7; color: #1B3F69; border-color: #A6C0DD; }
+
+.tt-napit {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.muokkaa-tt {
+    background: var(--white);
+    color: var(--navy);
+    border: 1px solid var(--navy-100);
+}
+.muokkaa-tt:hover {
+    background: var(--navy);
+    color: var(--white);
+    border-color: var(--navy);
+}
+
+.muokkaa-lomake {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 12px;
+}
+.muokkaa-lomake label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--gray-700);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+.muokkaa-lomake input,
+.muokkaa-lomake select {
+    text-transform: none;
+    letter-spacing: normal;
+    font-size: 14px;
+    color: var(--ink);
+}
+.muokkaa-lomake input:disabled {
+    background: var(--ivory);
+    color: var(--gray-500);
+}
+
+.muokkaa-napit {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 8px;
+    padding-top: 12px;
+    border-top: 1px solid var(--gray-200);
+}
+
+@media (max-width: 720px) {
+    .muokkaa-lomake { grid-template-columns: 1fr; }
+}
+
 .vuoro-tyyppi-merkki {
     font-size: 11px;
     color: var(--gray-500);

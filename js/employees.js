@@ -14,6 +14,8 @@ const Employees = {
                 if (m.rooli === 'yksilomyynti') m.rooli = 'asiakaspalvelu';
                 // Migraatio: lisää sopimustieto jos puuttuu
                 if (!m.sopimus) m.sopimus = this.oletusSopimus(m);
+                // Migraatio: oletuksena ei etätöitä
+                if (!m.etatyo) m.etatyo = 'ei';
                 return m;
             });
             TYONTEKIJAT.length = 0;
@@ -61,14 +63,36 @@ const Employees = {
         Storage.save(this.AVAIN, TYONTEKIJAT);
     },
 
-    lisaa(nimi, rooli, tyyppi, sopimus) {
+    lisaa(nimi, rooli, tyyppi, sopimus, etatyo = 'ei') {
         const id = TYONTEKIJAT.length === 0
             ? 1
             : Math.max(...TYONTEKIJAT.map(t => t.id)) + 1;
-        const uusi = { id, nimi, rooli, tyyppi, sopimus: sopimus || this.oletusSopimus({ tyyppi }) };
+        const uusi = {
+            id, nimi, rooli, tyyppi,
+            sopimus: sopimus || this.oletusSopimus({ tyyppi }),
+            etatyo,
+        };
         TYONTEKIJAT.push(uusi);
         this.tallenna();
         return uusi;
+    },
+
+    // Päivitä etätyö-asetus
+    paivitaEtatyo(id, etatyo) {
+        const t = TYONTEKIJAT.find(x => x.id === id);
+        if (!t) return false;
+        t.etatyo = etatyo;
+        this.tallenna();
+        return true;
+    },
+
+    // Päivitä useita kenttiä kerralla (esim. muokkausmodaalista)
+    paivita(id, kentat) {
+        const t = TYONTEKIJAT.find(x => x.id === id);
+        if (!t) return false;
+        Object.assign(t, kentat);
+        this.tallenna();
+        return true;
     },
 
     // Päivitä olemassaolevan työntekijän sopimustiedot

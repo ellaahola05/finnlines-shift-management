@@ -12,16 +12,34 @@ const Shifts = {
 
     lisaa(paiva, tyontekijaId, vuorotyyppi, lisat = {}) {
         const vuorot = this.kaikki();
+        // Päätä etätyö automaattisesti jos ei nimenomaisesti annettu
+        let etana = lisat.etana;
+        if (etana === undefined) {
+            etana = this.paatteleEtana(tyontekijaId, paiva, vuorotyyppi);
+        }
         const uusi = {
             id: Date.now() + Math.random(),
             paiva,
             tyontekijaId,
             vuorotyyppi,
-            ...lisat, // esim. { lukittu: true, alku: '10:00', loppu: '15:00' }
+            ...lisat,
+            etana,
         };
         vuorot.push(uusi);
         this.tallenna(vuorot);
         return uusi;
+    },
+
+    // Päättelee onko vuoro etänä työntekijän asetuksen + toiveiden perusteella.
+    // Lähtöselvitys-vuorot eivät koskaan ole etänä.
+    paatteleEtana(tyontekijaId, paivaIso, vuorotyyppi) {
+        const tyyppi = vuorotyyppi || '';
+        if (tyyppi.includes('lahtoselvitys')) return false;
+        const t = TYONTEKIJAT.find(x => x.id === tyontekijaId);
+        if (!t) return false;
+        if (t.etatyo === 'aina') return true;
+        if (t.etatyo === 'voi' && Wishes.toivooEtana(tyontekijaId, paivaIso)) return true;
+        return false;
     },
 
     poista(id) {
@@ -252,9 +270,12 @@ const Shifts = {
         const lisaa = Math.max(0, tarvitaan - olemassa);
         if (lisaa === 0) return;
 
+        // Pois suodatetaan: aina etänä olevat sekä etätyötä toivovat — lähtöselvitys aina paikan päällä
         const ehdokkaat = TYONTEKIJAT
             .filter(t => t.rooli === 'asiakaspalvelu')
-            .filter(t => onKesa || t.tyyppi === 'vakituinen');
+            .filter(t => onKesa || t.tyyppi === 'vakituinen')
+            .filter(t => t.etatyo !== 'aina')
+            .filter(t => !Wishes.toivooEtana(t.id, paivaIso));
 
         const valitut = this.valitseTasapuolisesti(ehdokkaat, lisaa, paivaIso);
         valitut.forEach(t => this.lisaa(paivaIso, t.id, tyyppi));
