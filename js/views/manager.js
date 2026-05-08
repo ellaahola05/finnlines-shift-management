@@ -81,6 +81,8 @@ const ManagerView = {
                 <div class="paiva-otsikko">Su</div>
                 ${ruudukko}
             </div>
+
+            ${this.tuntiYhteenvetoHtml()}
         `;
 
         this.kiinnitaYhteisetTapahtumat(container);
@@ -518,7 +520,7 @@ const ManagerView = {
                             <option value="kesatyontekija"${t.tyyppi==='kesatyontekija'?' selected':''}>Kesätyöntekijä</option>
                         </select>
                     </label>
-                    <label id="muokkaa-label-min" style="${(sop.viikkotunnitMin && t.tyyppi !== 'vakituinen') ? '' : 'display:none'}">
+                    <label id="muokkaa-label-min" style="${t.tyyppi !== 'vakituinen' ? '' : 'display:none'}">
                         Vähintään h/vko:
                         <input type="number" id="muokkaa-viikkotunnit-min" value="${sop.viikkotunnitMin || 20}" min="0" max="60" step="0.5">
                     </label>
@@ -665,8 +667,10 @@ const ManagerView = {
             const lyhytNimi = tyontekija?.nimi.split(' ')[0] || '?';
             const lukko = v.lukittu ? '<span class="lukko-merkki" title="Lukittu">🔒</span>' : '';
             const etanaMerkki = v.etana ? '<span class="etana-merkki" title="Etänä">🏠</span>' : '';
-            const titleText = `${tyontekija?.nimi || '?'} — ${aika.alku}–${aika.loppu}${v.lukittu ? ' (lukittu)' : ''}${v.etana ? ' (etänä)' : ''}`;
-            return `<li class="${v.lukittu ? 'lukittu-vuoro' : ''}${v.etana ? ' etana-vuoro' : ''}" title="${titleText}">${lukko}${etanaMerkki}${lyhytNimi}</li>`;
+            const onLahtoselvitys = v.lahtoselvitys || (v.vuorotyyppi || '').includes('lahtoselvitys');
+            const lsMerkki = onLahtoselvitys ? '<span class="ls-merkki" title="Lähtöselvitys">🛂</span>' : '';
+            const titleText = `${tyontekija?.nimi || '?'} — ${aika.alku}–${aika.loppu}${v.lukittu ? ' (lukittu)' : ''}${v.etana ? ' (etänä)' : ''}${onLahtoselvitys ? ' (lähtöselvitys)' : ''}`;
+            return `<li class="${v.lukittu ? 'lukittu-vuoro' : ''}${v.etana ? ' etana-vuoro' : ''}" title="${titleText}">${lukko}${etanaMerkki}${lyhytNimi}${lsMerkki}</li>`;
         }).join('');
 
         const luokat = ['paiva-solu', 'klikattava'];
@@ -739,16 +743,29 @@ const ManagerView = {
                         ? `<button data-id="${v.id}" class="lukko-nappi lukittu" title="Lukittu — ei muutu uudelleenluonnissa. Klikkaa avataksesi lukon.">🔒</button>`
                         : `<button data-id="${v.id}" class="lukko-nappi" title="Avoinna — voi vaihtua uudelleenluonnissa. Klikkaa lukitaksesi.">🔓</button>`;
                     // Etätyö-toggle: lähtöselvitys-vuoroissa ei tarjota
-                    const onLahtoselvitys = v.vuorotyyppi.includes('lahtoselvitys');
-                    const etanaNappi = onLahtoselvitys
+                    const onLahtoselvitysVuoro = v.vuorotyyppi.includes('lahtoselvitys');
+                    const etanaNappi = onLahtoselvitysVuoro
                         ? ''
                         : v.etana
                             ? `<button data-id="${v.id}" class="etana-nappi etana-aktiivinen" title="Etänä — klikkaa vaihtaaksesi paikan päälle">🏠</button>`
                             : `<button data-id="${v.id}" class="etana-nappi" title="Paikan päällä — klikkaa vaihtaaksesi etänä">🏢</button>`;
+
+                    // Lähtöselvitys-toggle: asiakaspalvelu (aamu/lyhyt) ja satamavastaava — paikan päällä olevat
+                    const voiTehdaLs = (
+                        v.vuorotyyppi === 'asiakaspalvelu_aamu' ||
+                        v.vuorotyyppi === 'asiakaspalvelu_lyhyt' ||
+                        v.vuorotyyppi === 'satamavastaava'
+                    );
+                    const lsNappi = (voiTehdaLs && !v.etana)
+                        ? v.lahtoselvitys
+                            ? `<button data-id="${v.id}" class="ls-nappi ls-aktiivinen" title="Tekee lähtöselvityksen 12-14 — klikkaa poistaaksesi merkinnän">🛂</button>`
+                            : `<button data-id="${v.id}" class="ls-nappi" title="Klikkaa merkitäksesi tämän vuoron tekemään lähtöselvityksen 12-14">🛂</button>`
+                        : '';
                     return `
-                        <li class="${v.lukittu ? 'vuoro-lukittu' : ''}${v.etana ? ' vuoro-etana' : ''}">
+                        <li class="${v.lukittu ? 'vuoro-lukittu' : ''}${v.etana ? ' vuoro-etana' : ''}${v.lahtoselvitys ? ' vuoro-ls' : ''}">
                             ${lukkoNappi}
                             ${etanaNappi}
+                            ${lsNappi}
                             <strong>${t?.nimi || '? (poistettu työntekijä)'}</strong>
                             <span class="vuoro-aika-muokkaus">
                                 <input type="time" data-id="${v.id}" data-kentta="alku"  value="${aika.alku}"  class="muokkaa-aika">
@@ -789,6 +806,10 @@ const ManagerView = {
                         </label>
                         <label>Vuorotyyppi:
                             <select id="lisays-vuorotyyppi" required></select>
+                        </label>
+                        <label id="lisays-ls-label" class="checkbox-label" style="display:none">
+                            <input type="checkbox" id="lisays-lahtoselvitys">
+                            🛂 Tekee lähtöselvityksen 12–14
                         </label>
                         <button type="submit" class="ensisijainen">Lisää vuoro</button>
                     </form>
@@ -843,20 +864,50 @@ const ManagerView = {
                 });
             });
 
+            // Lähtöselvitys-merkinnän vaihto — lukitaan automaattisesti
+            modaali.querySelectorAll('.ls-nappi').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const id = parseFloat(btn.dataset.id);
+                    const v = Shifts.kaikki().find(x => x.id === id);
+                    if (!v) return;
+                    Shifts.paivita(id, { lahtoselvitys: !v.lahtoselvitys, lukittu: true });
+                    renderModaali();
+                });
+            });
+
             // Vuorotyyppi-pudotusvalikko päivittyy työntekijän mukaan
             const tyontekijaSelect = modaali.querySelector('#lisays-tyontekija');
             const tyyppiSelect = modaali.querySelector('#lisays-vuorotyyppi');
+            const lsLabel = modaali.querySelector('#lisays-ls-label');
+            const lsCheckbox = modaali.querySelector('#lisays-lahtoselvitys');
+
             const paivitaTyyppiOptiot = () => {
                 const id = parseInt(tyontekijaSelect.value, 10);
                 const t = TYONTEKIJAT.find(x => x.id === id);
                 if (!t) return;
                 const validit = Object.entries(VUOROTYYPIT)
-                    .filter(([_, v]) => v.rooli === t.rooli);
+                    .filter(([k, v]) => v.rooli === t.rooli)
+                    // Arkilähtöselvitys ei ole enää oma vuoro — käytä 'lähtöselvitys'-valintaruutua aamu/lyhyt-vuoroille
+                    .filter(([k]) => k !== 'asiakaspalvelu_lahtoselvitys_arki');
                 tyyppiSelect.innerHTML = validit.length
                     ? validit.map(([k, v]) => `<option value="${k}">${this.vuorotyypinNimi(k)} (${v.alku}–${v.loppu})</option>`).join('')
                     : '<option value="">Ei sopivia vuorotyyppejä tälle roolille</option>';
+                paivitaLsNakyvyys();
             };
+
+            const paivitaLsNakyvyys = () => {
+                const tyyppi = tyyppiSelect.value;
+                const voiTehdaLs = (
+                    tyyppi === 'asiakaspalvelu_aamu' ||
+                    tyyppi === 'asiakaspalvelu_lyhyt' ||
+                    tyyppi === 'satamavastaava'
+                );
+                lsLabel.style.display = voiTehdaLs ? '' : 'none';
+                if (!voiTehdaLs) lsCheckbox.checked = false;
+            };
+
             tyontekijaSelect.addEventListener('change', paivitaTyyppiOptiot);
+            tyyppiSelect.addEventListener('change', paivitaLsNakyvyys);
             paivitaTyyppiOptiot();
 
             // Lähetä lomake — manuaalinen lisäys lukitaan automaattisesti
@@ -865,7 +916,9 @@ const ManagerView = {
                 const tyontekijaId = parseInt(tyontekijaSelect.value, 10);
                 const vuorotyyppi = tyyppiSelect.value;
                 if (!vuorotyyppi) return;
-                Shifts.lisaa(paivaIso, tyontekijaId, vuorotyyppi, { lukittu: true });
+                const lisat = { lukittu: true };
+                if (lsCheckbox.checked) lisat.lahtoselvitys = true;
+                Shifts.lisaa(paivaIso, tyontekijaId, vuorotyyppi, lisat);
                 renderModaali();
             });
         };
@@ -898,5 +951,110 @@ const ManagerView = {
         const d = new Date(iso);
         const viikonpaivat = ['Sunnuntai','Maanantai','Tiistai','Keskiviikko','Torstai','Perjantai','Lauantai'];
         return `${viikonpaivat[d.getDay()]} ${d.getDate()}.${d.getMonth()+1}.${d.getFullYear()}`;
+    },
+
+    // Listaa kalenteriviikot (ISO) jotka ovat osittain tämän kuukauden sisällä
+    viikotKuussa(vuosi, kuukausi) {
+        const eka = new Date(vuosi, kuukausi, 1);
+        const viim = new Date(vuosi, kuukausi + 1, 0);
+        const viikot = new Set();
+        for (let d = new Date(eka); d <= viim; d.setDate(d.getDate() + 1)) {
+            viikot.add(Shifts.viikonNumero(d));
+        }
+        return Array.from(viikot).sort((a, b) => a - b);
+    },
+
+    // Värikoodi viikon tunneille (ok / alle / yli / tyhja)
+    tuntiVari(tunnit, sop) {
+        if (!tunnit) return 'tyhja';
+        const max = sop.viikkotunnit;
+        const min = sop.viikkotunnitMin || max;
+        if (tunnit > max) return 'yli';
+        if (tunnit < min) return 'alle';
+        return 'ok';
+    },
+
+    sopimusTeksti(sop) {
+        return (sop.viikkotunnitMin && sop.viikkotunnitMin < sop.viikkotunnit)
+            ? `${sop.viikkotunnitMin}–${sop.viikkotunnit} h/vko`
+            : `${sop.viikkotunnit} h/vko`;
+    },
+
+    tuntiYhteenvetoHtml() {
+        const vuosi = this.nykyinenVuosi;
+        const kk = this.nykyinenKuukausi;
+        const viikot = this.viikotKuussa(vuosi, kk);
+
+        // Ryhmittele rooleittain — sama järjestys kuin Henkilöstö-näkymässä
+        const ryhmat = [
+            { rooli: 'esihenkilo',         otsikko: 'Esihenkilö' },
+            { rooli: 'asiakaspalvelu',     otsikko: 'Asiakaspalvelu' },
+            { rooli: 'ryhmamyynti',        otsikko: 'Ryhmämyynti' },
+            { rooli: 'satamahenkilokunta', otsikko: 'Satamahenkilökunta' },
+        ];
+
+        const viikkoOtsikot = viikot.map(v => `<th>Vko ${v}</th>`).join('');
+
+        const rivitHtml = ryhmat.map(r => {
+            const tt = TYONTEKIJAT.filter(x => x.rooli === r.rooli);
+            if (!tt.length) return '';
+
+            const ryhmaOtsikko = `<tr class="yhteenveto-ryhma"><th colspan="${3 + viikot.length}">${r.otsikko}</th></tr>`;
+
+            const rivit = tt.map(t => {
+                const sop = t.sopimus || { viikkotunnit: 37.5 };
+                const data = Shifts.tunnitKuukaudessa(t.id, vuosi, kk);
+                const viikkoSolut = viikot.map(vk => {
+                    const x = data.viikot.find(d => d.vko === vk);
+                    const tunnit = x ? x.tunnit : 0;
+                    const vari = this.tuntiVari(tunnit, sop);
+                    const teksti = tunnit ? this.muotoileTunnit(tunnit) : '–';
+                    return `<td class="vko-solu vko-${vari}">${teksti}</td>`;
+                }).join('');
+                return `
+                    <tr>
+                        <td><strong>${t.nimi}</strong></td>
+                        <td class="sopimus-sarake">${this.sopimusTeksti(sop)}</td>
+                        <td class="yht-sarake">${this.muotoileTunnit(data.yhteensa)} h</td>
+                        ${viikkoSolut}
+                    </tr>
+                `;
+            }).join('');
+
+            return ryhmaOtsikko + rivit;
+        }).join('');
+
+        return `
+            <section class="yhteenveto-osio">
+                <h2>Työtuntien yhteenveto</h2>
+                <p class="muted">${this.kuukaudenNimi(kk)} ${vuosi} — vain tämän kuukauden tunnit, viikot lasketaan koko viikoltaan</p>
+                <div class="yhteenveto-skroll">
+                    <table class="yhteenveto-taulukko">
+                        <thead>
+                            <tr>
+                                <th>Työntekijä</th>
+                                <th>Sopimus</th>
+                                <th>Yhteensä</th>
+                                ${viikkoOtsikot}
+                            </tr>
+                        </thead>
+                        <tbody>${rivitHtml}</tbody>
+                    </table>
+                </div>
+                <div class="yhteenveto-selite">
+                    <span class="vari-laatikko vko-ok"></span> Sopimuksessa
+                    <span class="vari-laatikko vko-alle"></span> Alle minimin
+                    <span class="vari-laatikko vko-yli"></span> Yli maksimin
+                </div>
+            </section>
+        `;
+    },
+
+    muotoileTunnit(t) {
+        if (Math.round(t * 2) === t * 2) {
+            // Tasaluku tai .5 → näytä yhdellä desimaalilla
+            return Number.isInteger(t) ? String(t) : t.toFixed(1);
+        }
+        return t.toFixed(1);
     },
 };

@@ -86,6 +86,8 @@ const EmployeeView = {
                 ${this.kuukausiRuudukkoHtml(user.id, onJulkaistu)}
             </div>
 
+            ${this.omatTunnitHtml(user)}
+
             <h2>Pyydä lomaa</h2>
             <form id="loma-lomake" class="loma-lomake">
                 <label>Alkupäivä: <input type="date" id="loma-alku" required></label>
@@ -216,7 +218,9 @@ const EmployeeView = {
             sisaltoHtml = omatVuorot.map(v => {
                 const a = Shifts.aika(v);
                 const etanaIko = v.etana ? '🏠 ' : '';
-                return `<div class="merkki">${etanaIko}${a.alku}–${a.loppu}</div>`;
+                const onLs = v.lahtoselvitys || (v.vuorotyyppi || '').includes('lahtoselvitys');
+                const lsIko = onLs ? ' 🛂' : '';
+                return `<div class="merkki">${etanaIko}${a.alku}–${a.loppu}${lsIko}</div>`;
             }).join('');
         }
 
@@ -268,5 +272,51 @@ const EmployeeView = {
             ryhmamyynti: 'Ryhmämyynti',
             satamahenkilokunta: 'Satamahenkilökunta',
         })[rooli] || rooli;
+    },
+
+    omatTunnitHtml(user) {
+        const sop = user.sopimus || { viikkotunnit: 37.5 };
+        const data = Shifts.tunnitKuukaudessa(user.id, this.nykyinenVuosi, this.nykyinenKuukausi);
+        const max = sop.viikkotunnit;
+        const min = sop.viikkotunnitMin || max;
+
+        const sopimusTeksti = (min < max)
+            ? `${min}–${max} h/vko`
+            : `${max} h/vko`;
+
+        const viikotHtml = data.viikot.length
+            ? data.viikot.map(v => {
+                const vari = ManagerView.tuntiVari(v.tunnit, sop);
+                const prosentti = Math.min(100, (v.tunnit / max) * 100);
+                const etanaOsuus = v.etanaTunnit > 0
+                    ? `<span class="etana-pieni" title="Etänä ${ManagerView.muotoileTunnit(v.etanaTunnit)} h">🏠 ${ManagerView.muotoileTunnit(v.etanaTunnit)} h</span>`
+                    : '';
+                return `
+                    <div class="viikko-rivi">
+                        <span class="viikko-nimi">Vko ${v.vko}</span>
+                        <div class="palkki-tausta">
+                            <div class="palkki vko-${vari}" style="width: ${prosentti}%"></div>
+                        </div>
+                        <span class="viikko-tunnit">${ManagerView.muotoileTunnit(v.tunnit)} h</span>
+                        ${etanaOsuus}
+                    </div>
+                `;
+            }).join('')
+            : '<p class="muted">Ei vuoroja tässä kuussa.</p>';
+
+        return `
+            <section class="yhteenveto-osio">
+                <h2>Omat työtunnit</h2>
+                <div class="omat-tunnit-yhteenveto">
+                    <div class="omat-yht">
+                        <span class="iso-numero">${ManagerView.muotoileTunnit(data.yhteensa)}</span>
+                        <span class="iso-yksikko">h</span>
+                        <span class="iso-selitys">tässä kuussa</span>
+                    </div>
+                    <div class="omat-sop">Sopimus: <strong>${sopimusTeksti}</strong></div>
+                </div>
+                <div class="viikot-listana">${viikotHtml}</div>
+            </section>
+        `;
     },
 };

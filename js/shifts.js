@@ -65,6 +65,53 @@ const Shifts = {
         };
     },
 
+    // Vuoron kesto palkallisina tunteina.
+    // Lakisääteinen 30 min lounastauko vähennetään ≥ 6 h vuoroista
+    // (esim. 9–17 = 8 h brutto → 7.5 h palkka).
+    kesto(vuoro) {
+        const a = this.aika(vuoro);
+        if (!a.alku || !a.loppu) return 0;
+        const [ah, am] = a.alku.split(':').map(Number);
+        const [lh, lm] = a.loppu.split(':').map(Number);
+        const brutto = Math.max(0, ((lh * 60 + lm) - (ah * 60 + am)) / 60);
+        return brutto >= 6 ? brutto - 0.5 : brutto;
+    },
+
+    // ISO-viikkonumero (ma-su)
+    viikonNumero(d) {
+        const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+        date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
+        const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+        return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+    },
+
+    // Yhteenveto työntekijän tunneista yhdessä kuukaudessa
+    // Palauttaa: { yhteensa, viikot: [{ vko, tunnit, etanaTunnit }] }
+    tunnitKuukaudessa(tyontekijaId, vuosi, kuukausi) {
+        const omat = this.tyontekijalle(tyontekijaId).filter(v => {
+            const d = new Date(v.paiva);
+            return d.getFullYear() === vuosi && d.getMonth() === kuukausi;
+        });
+
+        const viikotMap = {};
+        let yhteensa = 0;
+
+        for (const v of omat) {
+            const kesto = this.kesto(v);
+            yhteensa += kesto;
+            const wk = this.viikonNumero(new Date(v.paiva));
+            if (!viikotMap[wk]) viikotMap[wk] = { tunnit: 0, etanaTunnit: 0 };
+            viikotMap[wk].tunnit += kesto;
+            if (v.etana) viikotMap[wk].etanaTunnit += kesto;
+        }
+
+        const viikot = Object.entries(viikotMap)
+            .map(([wk, d]) => ({ vko: parseInt(wk, 10), ...d }))
+            .sort((a, b) => a.vko - b.vko);
+
+        return { yhteensa, viikot };
+    },
+
     paivalle(paiva) {
         return this.kaikki().filter(v => v.paiva === paiva);
     },
@@ -263,22 +310,56 @@ const Shifts = {
         const kk = parseInt(paivaIso.substring(5,7), 10);
         const onKesa = SAANNOT.kesakuukaudet.includes(kk);
         const tarvitaan = onKesa ? SAANNOT.kesaLahtoselvitysMin : SAANNOT.talviLahtoselvitysMin;
-        const tyyppi = onViikonloppu ? 'asiakaspalvelu_lahtoselvitys_vkl' : 'asiakaspalvelu_lahtoselvitys_arki';
 
-        // Ota huomioon jo olemassa olevat (lukitut) vuorot
-        const olemassa = this.paivalle(paivaIso).filter(v => v.vuorotyyppi === tyyppi).length;
-        const lisaa = Math.max(0, tarvitaan - olemassa);
-        if (lisaa === 0) return;
+        // ==== VIIKONLOPPU: oma erillinen vuoro 12-15 ====
+        if (onViikonloppu) {
+            const tyyppi = 'asiakaspalvelu_lahtoselvitys_vkl';
+            const olemassa = this.paivalle(paivaIso).filter(v => v.vuorotyyppi === tyyppi).length;
+            const lisaa = Math.max(0, tarvitaan - olemassa);
+            if (lisaa === 0) return;
 
-        // Pois suodatetaan: aina etänä olevat sekä etätyötä toivovat — lähtöselvitys aina paikan päällä
-        const ehdokkaat = TYONTEKIJAT
-            .filter(t => t.rooli === 'asiakaspalvelu')
-            .filter(t => onKesa || t.tyyppi === 'vakituinen')
-            .filter(t => t.etatyo !== 'aina')
-            .filter(t => !Wishes.toivooEtana(t.id, paivaIso));
+            const ehdokkaat = TYONTEKIJAT
+                .filter(t => t.rooli === 'asiakaspalvelu')
+                .filter(t => onKesa || t.tyyppi === 'vakituinen')
+                .filter(t => t.etatyo !== 'aina')
+                .filter(t => !Wishes.toivooEtana(t.id, paivaIso));
 
-        const valitut = this.valitseTasapuolisesti(ehdokkaat, lisaa, paivaIso);
-        valitut.forEach(t => this.lisaa(paivaIso, t.id, tyyppi));
+            const valitut = this.valitseTasapuolisesti(ehdokkaat, lisaa, paivaIso);
+            valitut.forEach(t => this.lisaa(paivaIso, t.id, tyyppi));
+            return;
+        }
+
+        // ==== ARKI: merkitään lähtöselvitys olemassa olevaan vuoroon ====
+        // (työntekijä tekee sen normaalin vuoronsa aikana 12-14, ei tule vain 2h:ksi)
+
+        // Etsi sopivat vuorot: paikan päällä olevat asiakaspalvelu-vuorot,
+        // joissa ei vielä ole lähtöselvitys-merkintää
+        const sopivatVuorot = this.paivalle(paivaIso).filter(v =>
+            (v.vuorotyyppi === 'asiakaspalvelu_aamu' || v.vuorotyyppi === 'asiakaspalvelu_lyhyt')
+            && !v.etana
+        );
+
+        // Lasketaan jo merkityt
+        const joMerkityt = sopivatVuorot.filter(v => v.lahtoselvitys).length;
+        const merkittavaa = Math.max(0, tarvitaan - joMerkityt);
+        if (merkittavaa === 0) return;
+
+        // Vapaina (ei vielä merkityt)
+        const vapaat = sopivatVuorot.filter(v => !v.lahtoselvitys);
+
+        // Prioriteetti: kesätyöntekijät ensin, sitten muut
+        vapaat.sort((a, b) => {
+            const ta = TYONTEKIJAT.find(t => t.id === a.tyontekijaId);
+            const tb = TYONTEKIJAT.find(t => t.id === b.tyontekijaId);
+            const aKesa = ta?.tyyppi === 'kesatyontekija' ? 0 : 1;
+            const bKesa = tb?.tyyppi === 'kesatyontekija' ? 0 : 1;
+            return aKesa - bKesa;
+        });
+
+        // Merkitse N ensimmäistä lähtöselvitykseen
+        vapaat.slice(0, merkittavaa).forEach(v => {
+            this.paivita(v.id, { lahtoselvitys: true });
+        });
     },
 
     valitseTasapuolisesti(ehdokkaat, maara, paivaIso) {
