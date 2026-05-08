@@ -594,6 +594,40 @@ input[type="time"].muokkaa-aika:focus {
     cursor: help;
 }
 
+/* ===== Lukko ===== */
+.lukko-nappi {
+    background: transparent;
+    border: 1px solid var(--gray-300);
+    padding: 4px 8px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+.lukko-nappi.lukittu {
+    background: var(--navy-50);
+    border-color: var(--navy);
+}
+.lukko-nappi:hover {
+    background: var(--navy-100);
+}
+
+.vuoro-lukittu {
+    background: var(--navy-50) !important;
+    border-left: 3px solid var(--navy) !important;
+}
+
+.lukko-merkki {
+    font-size: 9px;
+    margin-right: 2px;
+    opacity: 0.7;
+}
+
+.paiva-solu li.lukittu-vuoro {
+    background: var(--navy-100);
+    border-color: var(--navy);
+}
+
 .vuoro-tyyppi-merkki {
     font-size: 11px;
     color: var(--gray-500);

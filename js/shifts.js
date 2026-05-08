@@ -10,13 +10,14 @@ const Shifts = {
         Storage.save(this.AVAIN, vuorot);
     },
 
-    lisaa(paiva, tyontekijaId, vuorotyyppi) {
+    lisaa(paiva, tyontekijaId, vuorotyyppi, lisat = {}) {
         const vuorot = this.kaikki();
         const uusi = {
             id: Date.now() + Math.random(),
             paiva,
             tyontekijaId,
             vuorotyyppi,
+            ...lisat, // esim. { lukittu: true, alku: '10:00', loppu: '15:00' }
         };
         vuorot.push(uusi);
         this.tallenna(vuorot);
@@ -64,8 +65,10 @@ const Shifts = {
             paivat.push(this.toIso(new Date(vuosi, kuukausi, p)));
         }
 
-        // Poista vanhat vuorot tältä kuukaudelta ennen uusien luontia
-        const ilman = this.kaikki().filter(v => !paivat.includes(v.paiva));
+        // Poista vain LUKITSEMATTOMAT vuorot tältä kuukaudelta — lukitut säilyvät.
+        const ilman = this.kaikki().filter(v =>
+            !paivat.includes(v.paiva) || v.lukittu
+        );
         this.tallenna(ilman);
 
         for (const paiva of paivat) {
@@ -122,8 +125,13 @@ const Shifts = {
         // Pyhinä ja poikkeuspäivinä ei vuoroja
         if (onPoikkeuspaiva) return;
 
-        // Satamavastaava — joka laivapäivä (myös viikonloppu)
-        this.luoSatamavastaava(paivaIso);
+        // Onko työntekijällä jo vuoro tänä päivänä? (lukitut huomioidaan)
+        const onJoTyontekijalla = (id) => this.paivalle(paivaIso).some(v => v.tyontekijaId === id);
+
+        // Satamavastaava — joka laivapäivä (myös viikonloppu) jollei jo lukittu
+        if (!this.paivalle(paivaIso).some(v => v.vuorotyyppi === 'satamavastaava')) {
+            this.luoSatamavastaava(paivaIso);
+        }
 
         // Viikonloppuna lisäksi vain lähtöselvitys
         if (onViikonloppu) {
@@ -132,12 +140,18 @@ const Shifts = {
         }
 
         // Arkipäivänä:
-        // 1. Esihenkilö
-        this.lisaa(paivaIso, 1, 'esihenkilo');
+        // 1. Esihenkilö (jollei jo olemassa)
+        if (!onJoTyontekijalla(1)) {
+            this.lisaa(paivaIso, 1, 'esihenkilo');
+        }
 
-        // 2. Ryhmämyynti — kaikki paikalla aina arkisin
+        // 2. Ryhmämyynti — kaikki paikalla aina arkisin (ohita ne jotka jo lukittu)
         const ryhma = TYONTEKIJAT.filter(t => t.rooli === 'ryhmamyynti');
-        ryhma.forEach(t => this.lisaa(paivaIso, t.id, 'ryhma'));
+        ryhma.forEach(t => {
+            if (!onJoTyontekijalla(t.id)) {
+                this.lisaa(paivaIso, t.id, 'ryhma');
+            }
+        });
 
         // 3. Asiakaspalvelu — sesonkiriippuvainen määrä
         this.luoAsiakaspalveluVuorot(paivaIso);
@@ -213,12 +227,17 @@ const Shifts = {
         const onKesa = SAANNOT.kesakuukaudet.includes(kk);
         const tarvitaan = onKesa ? SAANNOT.kesaAsiakaspalveluMin : SAANNOT.talviAsiakaspalveluMin;
 
+        // Ota huomioon jo olemassa olevat (lukitut) vuorot
+        const olemassa = this.paivalle(paivaIso).filter(v => v.vuorotyyppi === 'asiakaspalvelu_aamu').length;
+        const lisaa = Math.max(0, tarvitaan - olemassa);
+        if (lisaa === 0) return;
+
         const ehdokkaat = TYONTEKIJAT
             .filter(t => t.rooli === 'asiakaspalvelu')
             // Talvella vain vakituiset
             .filter(t => onKesa || t.tyyppi === 'vakituinen');
 
-        const valitut = this.valitseTasapuolisesti(ehdokkaat, tarvitaan, paivaIso);
+        const valitut = this.valitseTasapuolisesti(ehdokkaat, lisaa, paivaIso);
         valitut.forEach(t => this.lisaa(paivaIso, t.id, 'asiakaspalvelu_aamu'));
     },
 
@@ -226,13 +245,18 @@ const Shifts = {
         const kk = parseInt(paivaIso.substring(5,7), 10);
         const onKesa = SAANNOT.kesakuukaudet.includes(kk);
         const tarvitaan = onKesa ? SAANNOT.kesaLahtoselvitysMin : SAANNOT.talviLahtoselvitysMin;
+        const tyyppi = onViikonloppu ? 'asiakaspalvelu_lahtoselvitys_vkl' : 'asiakaspalvelu_lahtoselvitys_arki';
+
+        // Ota huomioon jo olemassa olevat (lukitut) vuorot
+        const olemassa = this.paivalle(paivaIso).filter(v => v.vuorotyyppi === tyyppi).length;
+        const lisaa = Math.max(0, tarvitaan - olemassa);
+        if (lisaa === 0) return;
 
         const ehdokkaat = TYONTEKIJAT
             .filter(t => t.rooli === 'asiakaspalvelu')
             .filter(t => onKesa || t.tyyppi === 'vakituinen');
 
-        const valitut = this.valitseTasapuolisesti(ehdokkaat, tarvitaan, paivaIso);
-        const tyyppi = onViikonloppu ? 'asiakaspalvelu_lahtoselvitys_vkl' : 'asiakaspalvelu_lahtoselvitys_arki';
+        const valitut = this.valitseTasapuolisesti(ehdokkaat, lisaa, paivaIso);
         valitut.forEach(t => this.lisaa(paivaIso, t.id, tyyppi));
     },
 

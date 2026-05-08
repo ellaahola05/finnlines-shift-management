@@ -94,7 +94,7 @@ const ManagerView = {
             this.render(container);
         });
         document.getElementById('luo-vuorot').addEventListener('click', () => {
-            const teksti = `Luodaanko vuorot kuukaudelle ${this.kuukaudenNimi(this.nykyinenKuukausi)} ${this.nykyinenVuosi}? Olemassa olevat vuorot tältä kuukaudelta korvataan.`;
+            const teksti = `Luodaanko vuorot kuukaudelle ${this.kuukaudenNimi(this.nykyinenKuukausi)} ${this.nykyinenVuosi}?\n\n• Lukitut vuorot (🔒) säilyvät\n• Muut vuorot luodaan uudelleen automatiikalla`;
             if (confirm(teksti)) {
                 Shifts.luoKuukausi(this.nykyinenVuosi, this.nykyinenKuukausi, Exceptions.paivat());
                 this.render(container);
@@ -534,7 +534,8 @@ const ManagerView = {
             const tyontekija = TYONTEKIJAT.find(t => t.id === v.tyontekijaId);
             const aika = Shifts.aika(v);
             const lyhytNimi = tyontekija?.nimi.split(' ')[0] || '?';
-            return `<li title="${tyontekija?.nimi || '?'} — ${aika.alku}–${aika.loppu}">${lyhytNimi}</li>`;
+            const lukko = v.lukittu ? '<span class="lukko-merkki" title="Lukittu">🔒</span>' : '';
+            return `<li class="${v.lukittu ? 'lukittu-vuoro' : ''}" title="${tyontekija?.nimi || '?'} — ${aika.alku}–${aika.loppu}${v.lukittu ? ' (lukittu)' : ''}">${lukko}${lyhytNimi}</li>`;
         }).join('');
 
         const luokat = ['paiva-solu', 'klikattava'];
@@ -603,8 +604,12 @@ const ManagerView = {
                     const tyyppiNimi = this.vuorotyypinNimi(v.vuorotyyppi);
                     const aika = Shifts.aika(v);
                     const mukautettu = (v.alku || v.loppu) ? '<span class="mukautettu-merkki" title="Aika muokattu">✏️</span>' : '';
+                    const lukkoNappi = v.lukittu
+                        ? `<button data-id="${v.id}" class="lukko-nappi lukittu" title="Lukittu — ei muutu uudelleenluonnissa. Klikkaa avataksesi lukon.">🔒</button>`
+                        : `<button data-id="${v.id}" class="lukko-nappi" title="Avoinna — voi vaihtua uudelleenluonnissa. Klikkaa lukitaksesi.">🔓</button>`;
                     return `
-                        <li>
+                        <li class="${v.lukittu ? 'vuoro-lukittu' : ''}">
+                            ${lukkoNappi}
                             <strong>${t?.nimi || '? (poistettu työntekijä)'}</strong>
                             <span class="vuoro-aika-muokkaus">
                                 <input type="time" data-id="${v.id}" data-kentta="alku"  value="${aika.alku}"  class="muokkaa-aika">
@@ -667,12 +672,23 @@ const ManagerView = {
                 });
             });
 
-            // Kellonajan muokkaus
+            // Kellonajan muokkaus — lukitsee vuoron automaattisesti
             modaali.querySelectorAll('.muokkaa-aika').forEach(input => {
                 input.addEventListener('change', () => {
                     const id = parseFloat(input.dataset.id);
                     const kentta = input.dataset.kentta;
-                    Shifts.paivita(id, { [kentta]: input.value });
+                    Shifts.paivita(id, { [kentta]: input.value, lukittu: true });
+                    renderModaali();
+                });
+            });
+
+            // Lukon vaihto
+            modaali.querySelectorAll('.lukko-nappi').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const id = parseFloat(btn.dataset.id);
+                    const v = Shifts.kaikki().find(x => x.id === id);
+                    if (!v) return;
+                    Shifts.paivita(id, { lukittu: !v.lukittu });
                     renderModaali();
                 });
             });
@@ -693,13 +709,13 @@ const ManagerView = {
             tyontekijaSelect.addEventListener('change', paivitaTyyppiOptiot);
             paivitaTyyppiOptiot();
 
-            // Lähetä lomake
+            // Lähetä lomake — manuaalinen lisäys lukitaan automaattisesti
             modaali.querySelector('#lisays-lomake').addEventListener('submit', (e) => {
                 e.preventDefault();
                 const tyontekijaId = parseInt(tyontekijaSelect.value, 10);
                 const vuorotyyppi = tyyppiSelect.value;
                 if (!vuorotyyppi) return;
-                Shifts.lisaa(paivaIso, tyontekijaId, vuorotyyppi);
+                Shifts.lisaa(paivaIso, tyontekijaId, vuorotyyppi, { lukittu: true });
                 renderModaali();
             });
         };
