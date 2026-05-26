@@ -738,7 +738,18 @@ const ManagerView = {
 
         const haku = (this.hakuSana || '').trim().toLowerCase();
         const vuorot = Shifts.paivalle(iso);
-        const vuoroHtml = vuorot.map(v => {
+
+        // Ryhmittele roolin mukaan, sisällä lyhin vuoro ensin (tasapeli: alkuaika)
+        const rooliJarjestys = ['esihenkilo', 'asiakaspalvelu', 'ryhmamyynti', 'satamahenkilokunta'];
+        const ryhmat = {};
+        vuorot.forEach(v => {
+            const t = TYONTEKIJAT.find(x => x.id === v.tyontekijaId);
+            const rooli = t?.rooli || 'tuntematon';
+            if (!ryhmat[rooli]) ryhmat[rooli] = [];
+            ryhmat[rooli].push(v);
+        });
+
+        const vuoroHtml = (v) => {
             const tyontekija = TYONTEKIJAT.find(t => t.id === v.tyontekijaId);
             const aika = Shifts.aika(v);
             const lyhytNimi = tyontekija?.nimi.split(' ')[0] || '?';
@@ -753,6 +764,22 @@ const ManagerView = {
             if (v.etana) luokat.push('etana-vuoro');
             if (haku) luokat.push(onOsuma ? 'haku-osuma' : 'haku-himmea');
             return `<li class="${luokat.join(' ')}" title="${titleText}">${lukko}${etanaMerkki}${lyhytNimi}${lsMerkki}</li>`;
+        };
+
+        const roolitJarjestyksessa = [
+            ...rooliJarjestys.filter(r => ryhmat[r]),
+            ...Object.keys(ryhmat).filter(r => !rooliJarjestys.includes(r)),
+        ];
+
+        const ryhmatHtml = roolitJarjestyksessa.map(rooli => {
+            const ryhma = ryhmat[rooli].slice().sort((a, b) => {
+                const ka = Shifts.kesto(a);
+                const kb = Shifts.kesto(b);
+                if (ka !== kb) return ka - kb;
+                return Shifts.aika(a).alku.localeCompare(Shifts.aika(b).alku);
+            });
+            const rivit = ryhma.map(vuoroHtml).join('');
+            return `<ul class="vuoro-ryhma rooli-${rooli}">${rivit}</ul>`;
         }).join('');
 
         const luokat = ['paiva-solu', 'klikattava'];
@@ -765,7 +792,7 @@ const ManagerView = {
         return `
             <div class="${luokat.join(' ')}" data-paiva="${iso}" title="Klikkaa muokataksesi">
                 <div class="paiva-numero">${d.getDate()}${poikkeusMerkki}</div>
-                <ul>${vuoroHtml}</ul>
+                ${ryhmatHtml}
             </div>
         `;
     },
