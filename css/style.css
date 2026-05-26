@@ -1684,6 +1684,191 @@ input[type="date"]:focus, input[type="text"]:focus {
     background: transparent;
 }
 
+/* ===== Sääntö-näkymä ===== */
+.saannot-osio {
+    background: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    padding: 24px 28px;
+    margin-bottom: 24px;
+    border: 1px solid var(--gray-100);
+}
+
+.saannot-osio h2 {
+    margin-top: 0;
+}
+
+.saannot-lomake fieldset {
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-sm);
+    padding: 16px 18px;
+    margin: 14px 0;
+}
+.saannot-lomake legend {
+    padding: 0 8px;
+    font-weight: 700;
+    color: var(--navy);
+    font-size: 13px;
+}
+
+.saannot-lomake label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 8px 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gray-700);
+}
+.saannot-lomake input[type="number"] {
+    width: 100%;
+    max-width: 120px;
+}
+
+.saannot-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+@media (max-width: 720px) {
+    .saannot-grid { grid-template-columns: 1fr; }
+}
+
+.kesakk-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 6px;
+    margin-top: 6px;
+}
+.kk-checkbox {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--fl-blue-50);
+    border: 1px solid var(--fl-blue-100);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--fl-blue);
+    cursor: pointer;
+    text-transform: none;
+    letter-spacing: normal;
+    transition: background 0.15s, border-color 0.15s;
+}
+.kk-checkbox:hover {
+    background: var(--fl-blue-100);
+}
+.kk-checkbox input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.saannot-napit {
+    display: flex;
+    gap: 12px;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--gray-200);
+    flex-wrap: wrap;
+}
+
+/* Kuukausilista */
+.kuukausi-saannot-lista {
+    list-style: none;
+    padding: 0;
+    margin: 12px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.kuukausi-rivi {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr auto;
+    gap: 16px;
+    align-items: center;
+    padding: 14px 18px;
+    background: var(--ivory);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-sm);
+}
+.kuukausi-rivi.on-ylikirjoitus {
+    background: var(--fl-blue-50);
+    border-color: var(--fl-blue-100);
+    border-left: 4px solid var(--fl-blue);
+}
+
+.kuukausi-nimi-osa {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.kuukausi-nimi-osa strong {
+    font-size: 15px;
+    color: var(--navy);
+}
+
+.kausi-merkki {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: var(--radius-pill);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+.kausi-kesa {
+    background: var(--gold-100);
+    color: #7A5C00;
+}
+.kausi-talvi {
+    background: var(--fl-blue-100);
+    color: var(--fl-blue-700);
+}
+
+.ylik-merkki {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: var(--radius-pill);
+    font-size: 11px;
+    font-weight: 700;
+    background: var(--coral);
+    color: var(--white);
+}
+
+.kuukausi-arvot {
+    display: flex;
+    gap: 14px;
+    color: var(--gray-700);
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    flex-wrap: wrap;
+}
+
+.kuukausi-napit {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+@media (max-width: 720px) {
+    .kuukausi-rivi {
+        grid-template-columns: 1fr;
+    }
+    .kuukausi-napit {
+        justify-content: flex-end;
+    }
+}
+
+#saannot-vuosi {
+    margin-left: 6px;
+    font-weight: 600;
+}
+
 /* ===== Mobile ===== */
 @media (max-width: 720px) {
     #app { padding: 16px; }

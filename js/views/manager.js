@@ -2,7 +2,7 @@
 const ManagerView = {
     nykyinenVuosi: null,
     nykyinenKuukausi: null, // 0-11
-    nykyinenNakyma: 'tanaan', // 'tanaan' | 'kalenteri' | 'lomat' | 'toiveet' | 'poikkeukset' | 'henkilosto' | 'tulosta-tiimi' | 'tulosta-lahto'
+    nykyinenNakyma: 'tanaan', // 'tanaan' | 'kalenteri' | 'lomat' | 'toiveet' | 'poikkeukset' | 'henkilosto' | 'saannot' | 'tulosta-tiimi' | 'tulosta-lahto'
     hakuSana: '',
 
     render(container) {
@@ -36,6 +36,10 @@ const ManagerView = {
             this.renderToiveet(container);
             return;
         }
+        if (this.nykyinenNakyma === 'saannot') {
+            this.renderSaannot(container);
+            return;
+        }
 
         const onJulkaistu = Shifts.onJulkaistu(this.nykyinenVuosi, this.nykyinenKuukausi);
         const tila = onJulkaistu
@@ -64,6 +68,7 @@ const ManagerView = {
                     <button id="nakyma-toiveet">Toiveet${(() => { const n = Wishes.odottavat().length; return n > 0 ? ` (${n})` : ''; })()}</button>
                     <button id="nakyma-poikkeukset">Poikkeuspäivät</button>
                     <button id="nakyma-henkilosto">Henkilöstö</button>
+                    <button id="nakyma-saannot">⚙️ Säännöt</button>
                     <button id="logout">Kirjaudu ulos</button>
                 </nav>
             </header>
@@ -242,6 +247,7 @@ const ManagerView = {
                     <button id="nakyma-toiveet">Toiveet${(() => { const n = Wishes.odottavat().length; return n > 0 ? ` (${n})` : ''; })()}</button>
                     <button id="nakyma-poikkeukset">Poikkeuspäivät</button>
                     <button id="nakyma-henkilosto">Henkilöstö</button>
+                    <button id="nakyma-saannot">⚙️ Säännöt</button>
                     <button id="logout">Kirjaudu ulos</button>
                 </nav>
             </header>
@@ -302,6 +308,10 @@ const ManagerView = {
             this.nykyinenNakyma = 'toiveet';
             this.render(container);
         });
+        document.getElementById('nakyma-saannot').addEventListener('click', () => {
+            this.nykyinenNakyma = 'saannot';
+            this.render(container);
+        });
     },
 
     renderToiveet(container) {
@@ -355,6 +365,7 @@ const ManagerView = {
                     <button id="nakyma-toiveet" class="ensisijainen">Toiveet${odottavat.length > 0 ? ` (${odottavat.length})` : ''}</button>
                     <button id="nakyma-poikkeukset">Poikkeuspäivät</button>
                     <button id="nakyma-henkilosto">Henkilöstö</button>
+                    <button id="nakyma-saannot">⚙️ Säännöt</button>
                     <button id="logout">Kirjaudu ulos</button>
                 </nav>
             </header>
@@ -451,6 +462,7 @@ const ManagerView = {
                     <button id="nakyma-toiveet">Toiveet${(() => { const n = Wishes.odottavat().length; return n > 0 ? ` (${n})` : ''; })()}</button>
                     <button id="nakyma-poikkeukset">Poikkeuspäivät</button>
                     <button id="nakyma-henkilosto" class="ensisijainen">Henkilöstö</button>
+                    <button id="nakyma-saannot">⚙️ Säännöt</button>
                     <button id="logout">Kirjaudu ulos</button>
                 </nav>
             </header>
@@ -657,6 +669,307 @@ const ManagerView = {
         });
     },
 
+    // ===== Sääntöjen muokkausnäkymä =====
+
+    saannotValittuVuosi: null,   // näkymässä valittu vuosi (kuukausi-listalle)
+
+    renderSaannot(container) {
+        if (this.saannotValittuVuosi === null) {
+            this.saannotValittuVuosi = this.nykyinenVuosi;
+        }
+
+        const oletukset = Rules.oletukset();
+        const ylikirjoitukset = Rules.kuukausiYlikirjoitukset();
+        const vuosi = this.saannotValittuVuosi;
+
+        // Kuukausilista
+        const kuukausiRivit = [];
+        for (let kk = 0; kk < 12; kk++) {
+            const s = Rules.kuukaudelle(vuosi, kk);
+            const onYlikirjoitus = Rules.onYlikirjoitus(vuosi, kk);
+            const kausiMerkki = s.onKesa
+                ? '<span class="kausi-merkki kausi-kesa">☀️ Kesä</span>'
+                : '<span class="kausi-merkki kausi-talvi">❄️ Talvi</span>';
+            const ylikMerkki = onYlikirjoitus
+                ? '<span class="ylik-merkki" title="Tällä kuukaudella on omat asetukset">✏️ Muokattu</span>'
+                : '';
+            kuukausiRivit.push(`
+                <li class="kuukausi-rivi ${onYlikirjoitus ? 'on-ylikirjoitus' : ''}">
+                    <div class="kuukausi-nimi-osa">
+                        <strong>${this.kuukaudenNimi(kk)}</strong>
+                        ${kausiMerkki}
+                        ${ylikMerkki}
+                    </div>
+                    <div class="kuukausi-arvot">
+                        <span title="Asiakaspalvelijoita per päivä">👥 ${s.asiakaspalveluMin}–${s.asiakaspalveluMax}</span>
+                        <span title="Lähtöselvittäjiä per päivä">🛂 ${s.lahtoselvitysMin}–${s.lahtoselvitysMax}</span>
+                        <span title="Max peräkkäiset työpäivät">📅 max ${s.maxPerakkaiset}</span>
+                    </div>
+                    <div class="kuukausi-napit">
+                        <button class="muokkaa-kuukausi" data-vuosi="${vuosi}" data-kk="${kk}">Muokkaa</button>
+                        ${onYlikirjoitus ? `<button class="palauta-kuukausi hylkaa" data-vuosi="${vuosi}" data-kk="${kk}" title="Poista omat asetukset, palauta oletukseen">↩️ Palauta</button>` : ''}
+                    </div>
+                </li>
+            `);
+        }
+
+        // Kesäkuukaudet-checkboxit
+        const kkNimet = ['Tammikuu','Helmikuu','Maaliskuu','Huhtikuu','Toukokuu','Kesäkuu',
+                         'Heinäkuu','Elokuu','Syyskuu','Lokakuu','Marraskuu','Joulukuu'];
+        const kesakkBoxit = kkNimet.map((nimi, i) => {
+            const num = i + 1; // 1-12
+            const valittu = oletukset.kesakuukaudet.includes(num);
+            return `<label class="kk-checkbox"><input type="checkbox" name="kesakk" value="${num}" ${valittu ? 'checked' : ''}> ${nimi}</label>`;
+        }).join('');
+
+        container.innerHTML = `
+            <header class="topbar">
+                <div class="brand">
+                    <img src="assets/finnlines-logo.svg" alt="Finnlines">
+                    <div class="brand-divider"></div>
+                    <span class="brand-app-name">Vuorohallinta</span>
+                </div>
+                <nav class="nav">
+                    <button id="nakyma-tanaan">Tänään</button>
+                    <button id="nakyma-kalenteri">Kalenteri</button>
+                    <button id="nakyma-lomat">Lomapyynnöt</button>
+                    <button id="nakyma-toiveet">Toiveet${(() => { const n = Wishes.odottavat().length; return n > 0 ? ` (${n})` : ''; })()}</button>
+                    <button id="nakyma-poikkeukset">Poikkeuspäivät</button>
+                    <button id="nakyma-henkilosto">Henkilöstö</button>
+                    <button id="nakyma-saannot" class="ensisijainen">⚙️ Säännöt</button>
+                    <button id="logout">Kirjaudu ulos</button>
+                </nav>
+            </header>
+            <div class="page-header">
+                <h1>⚙️ Säännöt</h1>
+                <p class="muted">Säädä kuinka monta työntekijää vuoroihin tarvitaan. Uudet säännöt vaikuttavat <strong>vain seuraavaan vuorojen luontiin</strong> — jo luodut vuorot eivät muutu.</p>
+            </div>
+
+            <section class="saannot-osio">
+                <h2>Pohja-asetukset (kesä / talvi)</h2>
+                <p class="muted">Nämä arvot ovat oletus jokaiselle kuukaudelle. Yksittäisen kuukauden voi yli­kirjoittaa alempana.</p>
+
+                <form id="oletus-lomake" class="saannot-lomake">
+                    <fieldset>
+                        <legend>Mitkä kuukaudet ovat kesäkautta?</legend>
+                        <div class="kesakk-grid">${kesakkBoxit}</div>
+                    </fieldset>
+
+                    <div class="saannot-grid">
+                        <fieldset>
+                            <legend>☀️ Kesä</legend>
+                            <label>Asiakaspalvelijoita min: <input type="number" name="kesaAsiakaspalveluMin" min="0" max="20" value="${oletukset.kesaAsiakaspalveluMin}"></label>
+                            <label>Asiakaspalvelijoita max: <input type="number" name="kesaAsiakaspalveluMax" min="0" max="20" value="${oletukset.kesaAsiakaspalveluMax}"></label>
+                            <label>Lähtöselvittäjiä min: <input type="number" name="kesaLahtoselvitysMin" min="0" max="10" value="${oletukset.kesaLahtoselvitysMin}"></label>
+                            <label>Lähtöselvittäjiä max: <input type="number" name="kesaLahtoselvitysMax" min="0" max="10" value="${oletukset.kesaLahtoselvitysMax}"></label>
+                        </fieldset>
+
+                        <fieldset>
+                            <legend>❄️ Talvi</legend>
+                            <label>Asiakaspalvelijoita min: <input type="number" name="talviAsiakaspalveluMin" min="0" max="20" value="${oletukset.talviAsiakaspalveluMin}"></label>
+                            <label>Asiakaspalvelijoita max: <input type="number" name="talviAsiakaspalveluMax" min="0" max="20" value="${oletukset.talviAsiakaspalveluMax}"></label>
+                            <label>Lähtöselvittäjiä min: <input type="number" name="talviLahtoselvitysMin" min="0" max="10" value="${oletukset.talviLahtoselvitysMin}"></label>
+                            <label>Lähtöselvittäjiä max: <input type="number" name="talviLahtoselvitysMax" min="0" max="10" value="${oletukset.talviLahtoselvitysMax}"></label>
+                        </fieldset>
+                    </div>
+
+                    <fieldset class="koko-leveys">
+                        <legend>Yleiset</legend>
+                        <label>Max peräkkäiset työpäivät: <input type="number" name="maxPerakkaisetTyopaivat" min="1" max="14" value="${oletukset.maxPerakkaisetTyopaivat}"></label>
+                    </fieldset>
+
+                    <div class="saannot-napit">
+                        <button type="submit" class="ensisijainen">💾 Tallenna pohja-asetukset</button>
+                        <button type="button" id="palauta-tehdas" class="hylkaa">↩️ Palauta tehdasasetukset</button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="saannot-osio">
+                <h2>Kuukausikohtaiset poikkeukset</h2>
+                <p class="muted">
+                    Vuosi:
+                    <select id="saannot-vuosi">
+                        ${[vuosi - 1, vuosi, vuosi + 1, vuosi + 2].map(v => `<option value="${v}" ${v === vuosi ? 'selected' : ''}>${v}</option>`).join('')}
+                    </select>
+                </p>
+                <ul class="kuukausi-saannot-lista">
+                    ${kuukausiRivit.join('')}
+                </ul>
+            </section>
+        `;
+
+        this.kiinnitaYhteisetTapahtumat(container);
+
+        // Pohja-asetusten tallennus
+        document.getElementById('oletus-lomake').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const f = e.target;
+            const kesakk = Array.from(f.querySelectorAll('input[name="kesakk"]:checked'))
+                .map(el => Number(el.value));
+            const uudet = {
+                kesakuukaudet: kesakk,
+                kesaAsiakaspalveluMin: Number(f.kesaAsiakaspalveluMin.value),
+                kesaAsiakaspalveluMax: Number(f.kesaAsiakaspalveluMax.value),
+                kesaLahtoselvitysMin: Number(f.kesaLahtoselvitysMin.value),
+                kesaLahtoselvitysMax: Number(f.kesaLahtoselvitysMax.value),
+                talviAsiakaspalveluMin: Number(f.talviAsiakaspalveluMin.value),
+                talviAsiakaspalveluMax: Number(f.talviAsiakaspalveluMax.value),
+                talviLahtoselvitysMin: Number(f.talviLahtoselvitysMin.value),
+                talviLahtoselvitysMax: Number(f.talviLahtoselvitysMax.value),
+                maxPerakkaisetTyopaivat: Number(f.maxPerakkaisetTyopaivat.value),
+            };
+
+            // Pieni järkitarkistus
+            if (uudet.kesaAsiakaspalveluMin > uudet.kesaAsiakaspalveluMax ||
+                uudet.talviAsiakaspalveluMin > uudet.talviAsiakaspalveluMax) {
+                alert('Min ei voi olla suurempi kuin Max.');
+                return;
+            }
+
+            Rules.tallennaOletukset(uudet);
+            alert('✅ Pohja-asetukset tallennettu.');
+            this.render(container);
+        });
+
+        document.getElementById('palauta-tehdas').addEventListener('click', () => {
+            if (confirm('Palautetaanko KAIKKI sääntöjen tehdasasetukset?\n\nTämä poistaa pohja-asetukset JA kaikki kuukausikohtaiset poikkeukset.')) {
+                Rules.palautaOletuksiin();
+                this.render(container);
+            }
+        });
+
+        // Vuosivalitsin
+        document.getElementById('saannot-vuosi').addEventListener('change', (e) => {
+            this.saannotValittuVuosi = Number(e.target.value);
+            this.render(container);
+        });
+
+        // Kuukauden muokkaus
+        container.querySelectorAll('.muokkaa-kuukausi').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.avaaKuukausiSaantoModaali(
+                    Number(btn.dataset.vuosi),
+                    Number(btn.dataset.kk),
+                    container
+                );
+            });
+        });
+
+        // Kuukauden palautus
+        container.querySelectorAll('.palauta-kuukausi').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const vuosi = Number(btn.dataset.vuosi);
+                const kk = Number(btn.dataset.kk);
+                if (confirm(`Poistetaanko ${this.kuukaudenNimi(kk)} ${vuosi} -kuukauden omat asetukset?\n\nKuukausi palaa kesä/talvi-oletuksiin.`)) {
+                    Rules.poistaKuukausi(vuosi, kk);
+                    this.render(container);
+                }
+            });
+        });
+    },
+
+    // Yhden kuukauden ylikirjoituksen muokkaus
+    avaaKuukausiSaantoModaali(vuosi, kuukausi, kalenteriContainer) {
+        const s = Rules.kuukaudelle(vuosi, kuukausi);
+        const onYlikirjoitus = Rules.onYlikirjoitus(vuosi, kuukausi);
+        const all = Rules.kuukausiYlikirjoitukset();
+        const override = all[Rules.kuukausiAvain(vuosi, kuukausi)] || {};
+
+        const modaali = document.createElement('div');
+        modaali.className = 'modaali-tausta';
+        modaali.innerHTML = `
+            <div class="modaali" style="max-width: 520px;">
+                <div class="modaali-header">
+                    <h2>${this.kuukaudenNimi(kuukausi)} ${vuosi}</h2>
+                    <button class="sulje-modaali" id="kk-modaali-sulje">✕</button>
+                </div>
+                <p class="muted">
+                    Aseta tämän kuukauden omat arvot. Tyhjä kenttä → käytetään
+                    ${s.onKesa ? '☀️ kesä' : '❄️ talvi'}-oletusta.
+                </p>
+
+                <form id="kk-saanto-lomake" class="muokkaa-lomake" style="grid-template-columns: 1fr 1fr;">
+                    <label>Asiakaspalvelijoita min
+                        <input type="number" name="asiakaspalveluMin" min="0" max="20"
+                            value="${override.asiakaspalveluMin ?? ''}"
+                            placeholder="oletus: ${s.onKesa ? Rules.oletukset().kesaAsiakaspalveluMin : Rules.oletukset().talviAsiakaspalveluMin}">
+                    </label>
+                    <label>Asiakaspalvelijoita max
+                        <input type="number" name="asiakaspalveluMax" min="0" max="20"
+                            value="${override.asiakaspalveluMax ?? ''}"
+                            placeholder="oletus: ${s.onKesa ? Rules.oletukset().kesaAsiakaspalveluMax : Rules.oletukset().talviAsiakaspalveluMax}">
+                    </label>
+                    <label>Lähtöselvittäjiä min
+                        <input type="number" name="lahtoselvitysMin" min="0" max="10"
+                            value="${override.lahtoselvitysMin ?? ''}"
+                            placeholder="oletus: ${s.onKesa ? Rules.oletukset().kesaLahtoselvitysMin : Rules.oletukset().talviLahtoselvitysMin}">
+                    </label>
+                    <label>Lähtöselvittäjiä max
+                        <input type="number" name="lahtoselvitysMax" min="0" max="10"
+                            value="${override.lahtoselvitysMax ?? ''}"
+                            placeholder="oletus: ${s.onKesa ? Rules.oletukset().kesaLahtoselvitysMax : Rules.oletukset().talviLahtoselvitysMax}">
+                    </label>
+                    <label style="grid-column: 1 / -1;">Max peräkkäiset työpäivät
+                        <input type="number" name="maxPerakkaiset" min="1" max="14"
+                            value="${override.maxPerakkaiset ?? ''}"
+                            placeholder="oletus: ${Rules.oletukset().maxPerakkaisetTyopaivat}">
+                    </label>
+
+                    <div class="muokkaa-napit">
+                        <button type="button" id="kk-peruuta">Peruuta</button>
+                        ${onYlikirjoitus ? '<button type="button" id="kk-palauta" class="hylkaa">↩️ Palauta oletukseen</button>' : ''}
+                        <button type="submit" class="ensisijainen">💾 Tallenna</button>
+                    </div>
+                </form>
+            </div>
+        `;
+        document.body.appendChild(modaali);
+
+        const sulje = () => modaali.remove();
+        modaali.addEventListener('click', (e) => { if (e.target === modaali) sulje(); });
+        document.getElementById('kk-modaali-sulje').addEventListener('click', sulje);
+        document.getElementById('kk-peruuta').addEventListener('click', sulje);
+
+        if (onYlikirjoitus) {
+            document.getElementById('kk-palauta').addEventListener('click', () => {
+                Rules.poistaKuukausi(vuosi, kuukausi);
+                sulje();
+                this.render(kalenteriContainer);
+            });
+        }
+
+        document.getElementById('kk-saanto-lomake').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const f = e.target;
+            const uudet = {
+                asiakaspalveluMin: f.asiakaspalveluMin.value,
+                asiakaspalveluMax: f.asiakaspalveluMax.value,
+                lahtoselvitysMin: f.lahtoselvitysMin.value,
+                lahtoselvitysMax: f.lahtoselvitysMax.value,
+                maxPerakkaiset: f.maxPerakkaiset.value,
+            };
+
+            // Järkitarkistus: jos min ja max molemmat annettu, min ei voi olla suurempi
+            const apMin = Number(uudet.asiakaspalveluMin);
+            const apMax = Number(uudet.asiakaspalveluMax);
+            if (uudet.asiakaspalveluMin && uudet.asiakaspalveluMax && apMin > apMax) {
+                alert('Asiakaspalvelijoita min ei voi olla suurempi kuin max.');
+                return;
+            }
+            const lsMin = Number(uudet.lahtoselvitysMin);
+            const lsMax = Number(uudet.lahtoselvitysMax);
+            if (uudet.lahtoselvitysMin && uudet.lahtoselvitysMax && lsMin > lsMax) {
+                alert('Lähtöselvittäjiä min ei voi olla suurempi kuin max.');
+                return;
+            }
+
+            Rules.asetaKuukausi(vuosi, kuukausi, uudet);
+            sulje();
+            this.render(kalenteriContainer);
+        });
+    },
+
     renderPoikkeukset(container) {
         const rivit = Exceptions.kaikki();
         const rivitHtml = rivit.length
@@ -683,6 +996,7 @@ const ManagerView = {
                     <button id="nakyma-toiveet">Toiveet${(() => { const n = Wishes.odottavat().length; return n > 0 ? ` (${n})` : ''; })()}</button>
                     <button id="nakyma-poikkeukset" class="ensisijainen">Poikkeuspäivät</button>
                     <button id="nakyma-henkilosto">Henkilöstö</button>
+                    <button id="nakyma-saannot">⚙️ Säännöt</button>
                     <button id="logout">Kirjaudu ulos</button>
                 </nav>
             </header>
@@ -1152,6 +1466,7 @@ const ManagerView = {
                     <button id="nakyma-toiveet">Toiveet${(() => { const n = Wishes.odottavat().length; return n > 0 ? ` (${n})` : ''; })()}</button>
                     <button id="nakyma-poikkeukset">Poikkeuspäivät</button>
                     <button id="nakyma-henkilosto">Henkilöstö</button>
+                    <button id="nakyma-saannot">⚙️ Säännöt</button>
                     <button id="logout">Kirjaudu ulos</button>
                 </nav>
             </header>
