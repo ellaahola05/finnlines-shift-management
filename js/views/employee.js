@@ -1,8 +1,8 @@
-// Työntekijän näkymä — oma kuukausikalenteri, lomatoiveet, sairasilmoitukset
+// Työntekijän näkymä — Tänään, oma kalenteri, lomat, toiveet
 const EmployeeView = {
     nykyinenVuosi: null,
     nykyinenKuukausi: null,
-    nykyinenNakyma: 'tanaan', // 'tanaan' | 'kalenteri'
+    nykyinenNakyma: 'tanaan', // 'tanaan' | 'kalenteri' | 'lomat' | 'toiveet'
 
     render(container) {
         if (this.nykyinenVuosi === null) {
@@ -11,53 +11,31 @@ const EmployeeView = {
             this.nykyinenKuukausi = tanaan.getMonth();
         }
 
-        if (this.nykyinenNakyma === 'tanaan') {
-            this.renderTanaan(container);
-            return;
-        }
+        if (this.nykyinenNakyma === 'tanaan')   { this.renderTanaan(container);   return; }
+        if (this.nykyinenNakyma === 'kalenteri'){ this.renderKalenteri(container); return; }
+        if (this.nykyinenNakyma === 'lomat')    { this.renderLomat(container);    return; }
+        if (this.nykyinenNakyma === 'toiveet')  { this.renderToiveet(container);  return; }
 
-        const user = Auth.getCurrentUser();
-        const omatLomat = Leave.tyontekijalle(user.id)
-            .sort((a, b) => b.luotu.localeCompare(a.luotu));
+        // Fallback
+        this.nykyinenNakyma = 'tanaan';
+        this.renderTanaan(container);
+    },
 
-        const onJulkaistu = Shifts.onJulkaistu(this.nykyinenVuosi, this.nykyinenKuukausi);
-        const tila = onJulkaistu
-            ? '<span class="status status-julkaistu">✅ Julkaistu</span>'
-            : '<span class="status status-luonnos">⏳ Ei vielä julkaistu</span>';
+    // Yhteinen topbar + navigaatio. aktiivinen = 'tanaan' | 'kalenteri' | 'lomat' | 'toiveet'
+    topbarHtml(aktiivinen, user) {
+        // Näytä Lomat-painikkeessa odottavien pyyntöjen lkm jos on
+        const omatLomat = Leave.tyontekijalle(user.id);
+        const odottavatLomat = omatLomat.filter(l => l.tila === 'odottaa').length;
+        const lomaCounter = odottavatLomat > 0 ? ` (${odottavatLomat})` : '';
 
-        const lomaHtml = omatLomat.length
-            ? omatLomat.map(l => `
-                <li>
-                    <strong>${l.tyyppi === 'loma' ? 'Loma' : 'Sairas'}</strong>
-                    ${this.muotoilePvm(l.alku)}${l.alku !== l.loppu ? ' – ' + this.muotoilePvm(l.loppu) : ''}
-                    <span class="tila tila-${l.tila}">${this.tilanNimi(l.tila)}</span>
-                </li>
-            `).join('')
-            : '<li class="tyhja">Ei pyyntöjä.</li>';
+        // Toiveet-painikkeessa odottavien toiveiden lkm jos on
+        const omatToiveet = Wishes.tyontekijalle(user.id);
+        const odottavatToiveet = omatToiveet.filter(w => w.tila === 'odottaa').length;
+        const toiveCounter = odottavatToiveet > 0 ? ` (${odottavatToiveet})` : '';
 
-        const omatToiveet = Wishes.tyontekijalle(user.id)
-            .sort((a, b) => b.luotu.localeCompare(a.luotu));
-        const toiveetHtml = omatToiveet.length
-            ? omatToiveet.map(w => {
-                const tyyppiNimi = TOIVE_TYYPPI_NIMI[w.tyyppi] || w.tyyppi;
-                const ikoni = w.tyyppi === 'ei_kaytettavissa' ? '🔴' :
-                              w.tyyppi === 'toivoo_toita' ? '🟢' :
-                              w.tyyppi === 'etana' ? '🏠' : '💬';
-                const kommentti = w.kommentti ? ` <em class="kommentti">"${w.kommentti}"</em>` : '';
-                return `
-                    <li>
-                        <span class="toive-ikoni">${ikoni}</span>
-                        <strong>${tyyppiNimi}</strong>
-                        ${this.muotoilePvm(w.alku)}${w.alku !== w.loppu ? ' – ' + this.muotoilePvm(w.loppu) : ''}
-                        ${kommentti}
-                        <span class="tila tila-${w.tila}">${this.tilanNimi(w.tila)}</span>
-                        <button data-id="${w.id}" class="hylkaa poista-toive">Poista</button>
-                    </li>
-                `;
-            }).join('')
-            : '<li class="tyhja">Ei toiveita.</li>';
+        const ensi = (k) => aktiivinen === k ? ' class="ensisijainen"' : '';
 
-        container.innerHTML = `
+        return `
             <header class="topbar">
                 <div class="brand">
                     <img src="assets/finnlines-logo.svg" alt="Finnlines">
@@ -65,18 +43,56 @@ const EmployeeView = {
                     <span class="brand-app-name">Vuorohallinta</span>
                 </div>
                 <nav class="nav">
-                    <button id="nakyma-tanaan">Tänään</button>
-                    <button id="nakyma-kalenteri" class="ensisijainen">Oma kalenteri</button>
+                    <button id="nakyma-tanaan"${ensi('tanaan')}>Tänään</button>
+                    <button id="nakyma-kalenteri"${ensi('kalenteri')}>Oma kalenteri</button>
+                    <button id="nakyma-lomat"${ensi('lomat')}>🏖️ Lomat${lomaCounter}</button>
+                    <button id="nakyma-toiveet"${ensi('toiveet')}>💬 Toiveet${toiveCounter}</button>
                     <span class="user-chip">${user.nimi}</span>
                     <button id="logout">Kirjaudu ulos</button>
                 </nav>
             </header>
+        `;
+    },
+
+    // Kiinnitä topbar/nav-tapahtumakäsittelijät — kutsutaan jokaisesta render-funktiosta
+    kiinnitaNav(container) {
+        document.getElementById('logout').addEventListener('click', () => {
+            Auth.logout();
+            App.render();
+        });
+        document.getElementById('nakyma-tanaan').addEventListener('click', () => {
+            this.nykyinenNakyma = 'tanaan';
+            this.render(container);
+        });
+        document.getElementById('nakyma-kalenteri').addEventListener('click', () => {
+            this.nykyinenNakyma = 'kalenteri';
+            this.render(container);
+        });
+        document.getElementById('nakyma-lomat').addEventListener('click', () => {
+            this.nykyinenNakyma = 'lomat';
+            this.render(container);
+        });
+        document.getElementById('nakyma-toiveet').addEventListener('click', () => {
+            this.nykyinenNakyma = 'toiveet';
+            this.render(container);
+        });
+    },
+
+    // ===== Oma kalenteri -näkymä =====
+    renderKalenteri(container) {
+        const user = Auth.getCurrentUser();
+        const onJulkaistu = Shifts.onJulkaistu(this.nykyinenVuosi, this.nykyinenKuukausi);
+        const tila = onJulkaistu
+            ? '<span class="status status-julkaistu">✅ Julkaistu</span>'
+            : '<span class="status status-luonnos">⏳ Ei vielä julkaistu</span>';
+
+        container.innerHTML = `
+            ${this.topbarHtml('kalenteri', user)}
             <div class="page-header">
-                <h1>Hei, ${user.nimi.split(' ')[0]}!</h1>
-                <p class="muted">${this.roolinNimi(user.rooli)} · katso omat vuorosi ja pyydä lomaa</p>
+                <h1>Oma kalenteri</h1>
+                <p class="muted">${this.roolinNimi(user.rooli)} · ${this.kuukaudenNimi(this.nykyinenKuukausi)} ${this.nykyinenVuosi}</p>
             </div>
 
-            <h2>Omat vuorot</h2>
             <div class="kuukausi-nav">
                 <button id="edellinen">← Edellinen kuukausi</button>
                 <strong>${this.kuukaudenNimi(this.nykyinenKuukausi)} ${this.nykyinenVuosi}</strong>
@@ -95,50 +111,10 @@ const EmployeeView = {
             </div>
 
             ${this.omatTunnitHtml(user)}
-
-            <h2>Pyydä lomaa</h2>
-            <form id="loma-lomake" class="loma-lomake">
-                <label>Alkupäivä: <input type="date" id="loma-alku" required></label>
-                <label>Loppupäivä: <input type="date" id="loma-loppu" required></label>
-                <button type="submit" class="ensisijainen">Lähetä pyyntö</button>
-            </form>
-
-            <h2>Sairasilmoitus</h2>
-            <button id="sairas-nappi">Olen sairaana tänään</button>
-
-            <h2>Omat pyynnöt</h2>
-            <ul class="lomalista">${lomaHtml}</ul>
-
-            <h2>Työvuorotoiveet</h2>
-            <form id="toive-lomake" class="loma-lomake">
-                <label>Tyyppi:
-                    <select id="toive-tyyppi" required>
-                        <option value="ei_kaytettavissa">🔴 En käytettävissä</option>
-                        <option value="toivoo_toita">🟢 Toivon töitä</option>
-                        ${user.etatyo === 'voi' ? '<option value="etana">🏠 Olen etänä</option>' : ''}
-                        <option value="muu">💬 Muu toive</option>
-                    </select>
-                </label>
-                <label>Alkupäivä: <input type="date" id="toive-alku" required></label>
-                <label>Loppupäivä: <input type="date" id="toive-loppu" required></label>
-                <label>Kommentti (valinnainen): <input type="text" id="toive-kommentti" placeholder="esim. 'Aloitan mieluiten 10 jälkeen'"></label>
-                <button type="submit" class="ensisijainen">Lähetä toive</button>
-            </form>
-            <ul class="lomalista">${toiveetHtml}</ul>
         `;
 
-        document.getElementById('logout').addEventListener('click', () => {
-            Auth.logout();
-            App.render();
-        });
-        document.getElementById('nakyma-tanaan').addEventListener('click', () => {
-            this.nykyinenNakyma = 'tanaan';
-            this.render(container);
-        });
-        document.getElementById('nakyma-kalenteri').addEventListener('click', () => {
-            this.nykyinenNakyma = 'kalenteri';
-            this.render(container);
-        });
+        this.kiinnitaNav(container);
+
         document.getElementById('edellinen').addEventListener('click', () => {
             this.siirry(-1);
             this.render(container);
@@ -147,6 +123,70 @@ const EmployeeView = {
             this.siirry(1);
             this.render(container);
         });
+    },
+
+    // ===== Lomat-näkymä =====
+    renderLomat(container) {
+        const user = Auth.getCurrentUser();
+        const omatLomat = Leave.tyontekijalle(user.id)
+            .sort((a, b) => b.luotu.localeCompare(a.luotu));
+
+        // Jaa pyynnöt kolmeen ryhmään: odottavat, hyväksytyt, hylätyt/historia
+        const odottavat = omatLomat.filter(l => l.tila === 'odottaa');
+        const hyvaksytyt = omatLomat.filter(l => l.tila === 'hyvaksytty');
+        const muut = omatLomat.filter(l => l.tila === 'hylatty');
+
+        const rivit = (kokoelma, tyhjaTeksti) => kokoelma.length
+            ? kokoelma.map(l => `
+                <li>
+                    <strong>${l.tyyppi === 'loma' ? '🏖️ Loma' : '🤒 Sairas'}</strong>
+                    ${this.muotoilePvm(l.alku)}${l.alku !== l.loppu ? ' – ' + this.muotoilePvm(l.loppu) : ''}
+                    <span class="tila tila-${l.tila}">${this.tilanNimi(l.tila)}</span>
+                </li>
+            `).join('')
+            : `<li class="tyhja">${tyhjaTeksti}</li>`;
+
+        container.innerHTML = `
+            ${this.topbarHtml('lomat', user)}
+            <div class="page-header">
+                <h1>🏖️ Lomat ja sairauspoissaolot</h1>
+                <p class="muted">Pyydä lomaa tai ilmoita sairaudesta. Esihenkilö hyväksyy lomapyynnöt.</p>
+            </div>
+
+            <section class="yhteenveto-osio">
+                <h2 style="margin-top:0;">Pyydä lomaa</h2>
+                <form id="loma-lomake" class="loma-lomake">
+                    <label>Alkupäivä: <input type="date" id="loma-alku" required></label>
+                    <label>Loppupäivä: <input type="date" id="loma-loppu" required></label>
+                    <button type="submit" class="ensisijainen">Lähetä lomapyyntö</button>
+                </form>
+            </section>
+
+            <section class="yhteenveto-osio">
+                <h2 style="margin-top:0;">🤒 Sairasilmoitus</h2>
+                <p class="muted">Klikkaa jos olet tänään sairaana — esihenkilö saa tiedon heti.</p>
+                <button id="sairas-nappi" class="hylkaa">Olen sairaana tänään</button>
+            </section>
+
+            <section class="yhteenveto-osio">
+                <h2>Odottaa hyväksyntää ${odottavat.length > 0 ? `<span class="lkm">(${odottavat.length})</span>` : ''}</h2>
+                <ul class="lomalista">${rivit(odottavat, 'Ei odottavia pyyntöjä.')}</ul>
+            </section>
+
+            <section class="yhteenveto-osio">
+                <h2>Hyväksytyt</h2>
+                <ul class="lomalista">${rivit(hyvaksytyt, 'Ei hyväksyttyjä lomia.')}</ul>
+            </section>
+
+            ${muut.length > 0 ? `
+                <section class="yhteenveto-osio">
+                    <h2>Historia</h2>
+                    <ul class="lomalista">${rivit(muut, '')}</ul>
+                </section>
+            ` : ''}
+        `;
+
+        this.kiinnitaNav(container);
 
         document.getElementById('loma-lomake').addEventListener('submit', (e) => {
             e.preventDefault();
@@ -163,6 +203,85 @@ const EmployeeView = {
             alert('Sairasilmoitus tallennettu. Esihenkilö saa tiedon.');
             this.render(container);
         });
+    },
+
+    // ===== Toiveet-näkymä =====
+    renderToiveet(container) {
+        const user = Auth.getCurrentUser();
+        const omatToiveet = Wishes.tyontekijalle(user.id)
+            .sort((a, b) => b.luotu.localeCompare(a.luotu));
+
+        const odottavat = omatToiveet.filter(w => w.tila === 'odottaa');
+        const hyvaksytyt = omatToiveet.filter(w => w.tila === 'hyvaksytty');
+        const muut = omatToiveet.filter(w => w.tila === 'hylatty');
+
+        const rivit = (kokoelma, tyhjaTeksti) => kokoelma.length
+            ? kokoelma.map(w => {
+                const tyyppiNimi = TOIVE_TYYPPI_NIMI[w.tyyppi] || w.tyyppi;
+                const ikoni = w.tyyppi === 'ei_kaytettavissa' ? '🔴' :
+                              w.tyyppi === 'toivoo_toita' ? '🟢' :
+                              w.tyyppi === 'etana' ? '🏠' : '💬';
+                const kommentti = w.kommentti ? ` <em class="kommentti">"${w.kommentti}"</em>` : '';
+                const poistoNappi = w.tila === 'odottaa'
+                    ? `<button data-id="${w.id}" class="hylkaa poista-toive">Poista</button>`
+                    : '';
+                return `
+                    <li>
+                        <span class="toive-ikoni">${ikoni}</span>
+                        <strong>${tyyppiNimi}</strong>
+                        ${this.muotoilePvm(w.alku)}${w.alku !== w.loppu ? ' – ' + this.muotoilePvm(w.loppu) : ''}
+                        ${kommentti}
+                        <span class="tila tila-${w.tila}">${this.tilanNimi(w.tila)}</span>
+                        ${poistoNappi}
+                    </li>
+                `;
+            }).join('')
+            : `<li class="tyhja">${tyhjaTeksti}</li>`;
+
+        container.innerHTML = `
+            ${this.topbarHtml('toiveet', user)}
+            <div class="page-header">
+                <h1>💬 Työvuorotoiveet</h1>
+                <p class="muted">Kerro esihenkilölle päivät jolloin et voi tulla töihin, milloin haluat töitä, tai mitä muuta toivot.</p>
+            </div>
+
+            <section class="yhteenveto-osio">
+                <h2 style="margin-top:0;">Lähetä uusi toive</h2>
+                <form id="toive-lomake" class="loma-lomake">
+                    <label>Tyyppi:
+                        <select id="toive-tyyppi" required>
+                            <option value="ei_kaytettavissa">🔴 En käytettävissä</option>
+                            <option value="toivoo_toita">🟢 Toivon töitä</option>
+                            ${user.etatyo === 'voi' ? '<option value="etana">🏠 Olen etänä</option>' : ''}
+                            <option value="muu">💬 Muu toive</option>
+                        </select>
+                    </label>
+                    <label>Alkupäivä: <input type="date" id="toive-alku" required></label>
+                    <label>Loppupäivä: <input type="date" id="toive-loppu" required></label>
+                    <label>Kommentti (valinnainen): <input type="text" id="toive-kommentti" placeholder="esim. 'Aloitan mieluiten 10 jälkeen'"></label>
+                    <button type="submit" class="ensisijainen">Lähetä toive</button>
+                </form>
+            </section>
+
+            <section class="yhteenveto-osio">
+                <h2>Odottaa hyväksyntää ${odottavat.length > 0 ? `<span class="lkm">(${odottavat.length})</span>` : ''}</h2>
+                <ul class="lomalista">${rivit(odottavat, 'Ei odottavia toiveita.')}</ul>
+            </section>
+
+            <section class="yhteenveto-osio">
+                <h2>Hyväksytyt</h2>
+                <ul class="lomalista">${rivit(hyvaksytyt, 'Ei hyväksyttyjä toiveita.')}</ul>
+            </section>
+
+            ${muut.length > 0 ? `
+                <section class="yhteenveto-osio">
+                    <h2>Historia</h2>
+                    <ul class="lomalista">${rivit(muut, '')}</ul>
+                </section>
+            ` : ''}
+        `;
+
+        this.kiinnitaNav(container);
 
         document.getElementById('toive-lomake').addEventListener('submit', (e) => {
             e.preventDefault();
@@ -294,34 +413,11 @@ const EmployeeView = {
     renderTanaan(container) {
         const user = Auth.getCurrentUser();
         container.innerHTML = `
-            <header class="topbar">
-                <div class="brand">
-                    <img src="assets/finnlines-logo.svg" alt="Finnlines">
-                    <div class="brand-divider"></div>
-                    <span class="brand-app-name">Vuorohallinta</span>
-                </div>
-                <nav class="nav">
-                    <button id="nakyma-tanaan" class="ensisijainen">Tänään</button>
-                    <button id="nakyma-kalenteri">Oma kalenteri</button>
-                    <span class="user-chip">${user.nimi}</span>
-                    <button id="logout">Kirjaudu ulos</button>
-                </nav>
-            </header>
+            ${this.topbarHtml('tanaan', user)}
             ${ManagerView.tanaanSisaltoHtml(false)}
         `;
 
-        document.getElementById('logout').addEventListener('click', () => {
-            Auth.logout();
-            App.render();
-        });
-        document.getElementById('nakyma-tanaan').addEventListener('click', () => {
-            this.nykyinenNakyma = 'tanaan';
-            this.render(container);
-        });
-        document.getElementById('nakyma-kalenteri').addEventListener('click', () => {
-            this.nykyinenNakyma = 'kalenteri';
-            this.render(container);
-        });
+        this.kiinnitaNav(container);
     },
 
     omatTunnitHtml(user) {
