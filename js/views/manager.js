@@ -84,6 +84,7 @@ const ManagerView = {
             <div class="toiminnot">
                 ${tila}
                 <button id="luo-vuorot" class="ensisijainen">🪄 Luo kuukauden vuorot</button>
+                <button id="tyhjenna-vuorot" class="hylkaa">🗑️ Tyhjennä vuorot</button>
                 ${julkaiseNappi}
                 <details class="tulosta-dropdown">
                     <summary class="tulosta-summary">🖨️ Tulosta</summary>
@@ -123,6 +124,9 @@ const ManagerView = {
                 Shifts.luoKuukausi(this.nykyinenVuosi, this.nykyinenKuukausi, Exceptions.paivat());
                 this.render(container);
             }
+        });
+        document.getElementById('tyhjenna-vuorot').addEventListener('click', () => {
+            this.avaaTyhjennaModaali(container);
         });
         if (onJulkaistu) {
             document.getElementById('peru-julkaisu').addEventListener('click', () => {
@@ -823,6 +827,73 @@ const ManagerView = {
         const k = String(d.getMonth() + 1).padStart(2, '0');
         const p = String(d.getDate()).padStart(2, '0');
         return `${v}-${k}-${p}`;
+    },
+
+    // ===== Tyhjennä vuorot -modaali =====
+
+    avaaTyhjennaModaali(kalenteriContainer) {
+        // Lasketaan kuukauden vuorot — kerrotaan käyttäjälle paljonko poistuu
+        const paiviaKuussa = new Date(this.nykyinenVuosi, this.nykyinenKuukausi + 1, 0).getDate();
+        const paivat = [];
+        for (let p = 1; p <= paiviaKuussa; p++) {
+            paivat.push(this.iso(new Date(this.nykyinenVuosi, this.nykyinenKuukausi, p)));
+        }
+        const kuukaudenVuorot = Shifts.kaikki().filter(v => paivat.includes(v.paiva));
+        const lukittujen = kuukaudenVuorot.filter(v => v.lukittu).length;
+        const vapaiden = kuukaudenVuorot.length - lukittujen;
+
+        const modaali = document.createElement('div');
+        modaali.className = 'modaali-tausta';
+        modaali.innerHTML = `
+            <div class="modaali" style="max-width: 480px;">
+                <div class="modaali-header">
+                    <h2>🗑️ Tyhjennä vuorot</h2>
+                    <button class="sulje-modaali" id="tyhjenna-peruuta">✕</button>
+                </div>
+                <p>Kuukausi <strong>${this.kuukaudenNimi(this.nykyinenKuukausi)} ${this.nykyinenVuosi}</strong>:</p>
+                <ul style="margin: 0 0 18px 18px; color: var(--gray-700);">
+                    <li>${vapaiden} vapaata vuoroa</li>
+                    <li>${lukittujen} lukittua vuoroa 🔒</li>
+                </ul>
+                <p>Mitä haluat tyhjentää?</p>
+                <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 16px;">
+                    <button id="tyhjenna-vapaat" class="ensisijainen" ${vapaiden === 0 ? 'disabled' : ''}>
+                        Tyhjennä vain vapaat (${vapaiden})
+                    </button>
+                    <button id="tyhjenna-kaikki" class="hylkaa" ${kuukaudenVuorot.length === 0 ? 'disabled' : ''}>
+                        Tyhjennä KAIKKI vuorot (${kuukaudenVuorot.length})
+                    </button>
+                    <button id="tyhjenna-peruuta-2">Peruuta</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modaali);
+
+        const sulje = () => modaali.remove();
+
+        modaali.addEventListener('click', (e) => {
+            if (e.target === modaali) sulje();
+        });
+        document.getElementById('tyhjenna-peruuta').addEventListener('click', sulje);
+        document.getElementById('tyhjenna-peruuta-2').addEventListener('click', sulje);
+
+        document.getElementById('tyhjenna-vapaat').addEventListener('click', () => {
+            if (vapaiden === 0) return;
+            if (confirm(`Tyhjennetäänkö ${vapaiden} vapaata vuoroa kuukaudelta ${this.kuukaudenNimi(this.nykyinenKuukausi)} ${this.nykyinenVuosi}?\n\nLukitut vuorot (🔒) säilyvät.`)) {
+                Shifts.tyhjennaKuukausi(this.nykyinenVuosi, this.nykyinenKuukausi, false);
+                sulje();
+                this.render(kalenteriContainer);
+            }
+        });
+
+        document.getElementById('tyhjenna-kaikki').addEventListener('click', () => {
+            if (kuukaudenVuorot.length === 0) return;
+            if (confirm(`⚠️ POISTETAANKO KAIKKI ${kuukaudenVuorot.length} vuoroa kuukaudelta ${this.kuukaudenNimi(this.nykyinenKuukausi)} ${this.nykyinenVuosi}?\n\nMyös lukitut vuorot (🔒) poistetaan. Tätä ei voi peruuttaa.`)) {
+                Shifts.tyhjennaKuukausi(this.nykyinenVuosi, this.nykyinenKuukausi, true);
+                sulje();
+                this.render(kalenteriContainer);
+            }
+        });
     },
 
     // ===== Päivän muokkausmodaali =====

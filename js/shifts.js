@@ -141,6 +141,23 @@ const Shifts = {
         }
     },
 
+    // Tyhjentää kuukauden vuorot. Jos mukaanLukienLukitut = true, myös lukitut poistetaan.
+    tyhjennaKuukausi(vuosi, kuukausi, mukaanLukienLukitut = false) {
+        const paiviaKuussa = new Date(vuosi, kuukausi + 1, 0).getDate();
+        const paivat = [];
+        for (let p = 1; p <= paiviaKuussa; p++) {
+            paivat.push(this.toIso(new Date(vuosi, kuukausi, p)));
+        }
+
+        const jaljelle = this.kaikki().filter(v => {
+            const kuuluuKuukauteen = paivat.includes(v.paiva);
+            if (!kuuluuKuukauteen) return true;             // eri kuukausi → säilytä
+            if (mukaanLukienLukitut) return false;          // tyhjennä kaikki
+            return !!v.lukittu;                              // säilytä vain lukitut
+        });
+        this.tallenna(jaljelle);
+    },
+
     // --- JULKAISU ---
     // Kuukausi on joko 'luonnos' (oletus) tai 'julkaistu'.
     // Tallennetaan lista julkaistuista kuukausista muodossa 'YYYY-MM'.
@@ -290,8 +307,7 @@ const Shifts = {
     luoAsiakaspalveluVuorot(paivaIso) {
         const kk = parseInt(paivaIso.substring(5,7), 10);
         const onKesa = SAANNOT.kesakuukaudet.includes(kk);
-        // Käytetään MAX-määrää: varmistaa että työntekijöiden viikkotuntiminimit täyttyvät
-        const tarvitaan = onKesa ? SAANNOT.kesaAsiakaspalveluMax : SAANNOT.talviAsiakaspalveluMax;
+        const tarvitaan = onKesa ? SAANNOT.kesaAsiakaspalveluMin : SAANNOT.talviAsiakaspalveluMin;
 
         // Ota huomioon jo olemassa olevat (lukitut) vuorot
         const olemassa = this.paivalle(paivaIso).filter(v => v.vuorotyyppi === 'asiakaspalvelu_aamu').length;
@@ -314,11 +330,9 @@ const Shifts = {
 
         // ==== VIIKONLOPPU: oma erillinen vuoro 12-15 ====
         if (onViikonloppu) {
-            // Käytetään MAX-määrää viikonloppulähtöselvityksessä
-            const tarvitaanVkl = onKesa ? SAANNOT.kesaLahtoselvitysMax : SAANNOT.talviLahtoselvitysMax;
             const tyyppi = 'asiakaspalvelu_lahtoselvitys_vkl';
             const olemassa = this.paivalle(paivaIso).filter(v => v.vuorotyyppi === tyyppi).length;
-            const lisaa = Math.max(0, tarvitaanVkl - olemassa);
+            const lisaa = Math.max(0, tarvitaan - olemassa);
             if (lisaa === 0) return;
 
             const ehdokkaat = TYONTEKIJAT
@@ -335,9 +349,6 @@ const Shifts = {
         // ==== ARKI: merkitään lähtöselvitys olemassa olevaan vuoroon ====
         // (työntekijä tekee sen normaalin vuoronsa aikana 12-14, ei tule vain 2h:ksi)
 
-        // Käytetään MAX-määrää myös arkilähtöselvityksessä
-        const tarvitaanArki = onKesa ? SAANNOT.kesaLahtoselvitysMax : SAANNOT.talviLahtoselvitysMax;
-
         // Etsi sopivat vuorot: paikan päällä olevat asiakaspalvelu-vuorot,
         // joissa ei vielä ole lähtöselvitys-merkintää
         const sopivatVuorot = this.paivalle(paivaIso).filter(v =>
@@ -347,7 +358,7 @@ const Shifts = {
 
         // Lasketaan jo merkityt
         const joMerkityt = sopivatVuorot.filter(v => v.lahtoselvitys).length;
-        const merkittavaa = Math.max(0, tarvitaanArki - joMerkityt);
+        const merkittavaa = Math.max(0, tarvitaan - joMerkityt);
         if (merkittavaa === 0) return;
 
         // Vapaina (ei vielä merkityt)
@@ -380,66 +391,15 @@ const Shifts = {
         // Älä valitse, jos olisi 6+ peräkkäistä työpäivää
         const sopivat = vapaat.filter(t => !this.olisiLiikaaPerakkain(t.id, paivaIso));
 
-        // Sopimustavoite — vähimmäistunnit jotka kaikkien pitäisi saada viikossa.
-        //   Vakituinen: viikkotunnit (kiinteä esim. 37.5)
-        //   Vaihteleva sopimus: viikkotunnitMin (esim. 20)
-        const tavoiteTunnit = (t) => {
-            const max = (t.sopimus && t.sopimus.viikkotunnit) || 37.5;
-            const min = t.sopimus && t.sopimus.viikkotunnitMin;
-            return min || max;
-        };
-
-        // Suhteellinen vajaus (0–1): 1 = ei tunteja vielä, 0 = tavoite saavutettu.
-        // Suhteellinen mittari on reilu eri tavoitteilla — esim. vakituisen 37.5h ja
-        // kesätyöntekijän 20h ovat molemmat 100 % tyhjiä alussa.
-        const vajausSuhde = (t) => {
-            const tav = tavoiteTunnit(t);
-            if (tav <= 0) return 0;
-            const cur = this.viikonTunnit(t.id, paivaIso);
-            return Math.max(0, (tav - cur) / tav);
-        };
-
-        // Tyypin tasoarvo (käytetään vain ratkaisemaan tasatilanteet — vakituinen ennen)
-        const tyyppiPrio = { vakituinen: 0, maaraaikainen: 1, kesatyontekija: 2 };
-
+        // Järjestä: 1) töitä toivovat ensin, 2) sitten vuoromäärä (vähiten)
         const jarjestetyt = sopivat.sort((a, b) => {
-            // 1) Töitä toivovat ensin
             const aToivoo = Wishes.toivooToita(a.id, paivaIso) ? 0 : 1;
             const bToivoo = Wishes.toivooToita(b.id, paivaIso) ? 0 : 1;
             if (aToivoo !== bToivoo) return aToivoo - bToivoo;
-
-            // 2) Suurin suhteellinen vajaus ensin — varmistaa että minimitunnit täyttyvät
-            //    kaikille ennen kuin kukaan saa enemmän
-            const sa = vajausSuhde(a);
-            const sb = vajausSuhde(b);
-            if (sa !== sb) return sb - sa;
-
-            // 3) Tasatilanteessa vakituinen ennen muita
-            const ap = tyyppiPrio[a.tyyppi] ?? 99;
-            const bp = tyyppiPrio[b.tyyppi] ?? 99;
-            if (ap !== bp) return ap - bp;
-
-            // 4) Tasapuolinen jako — vähiten viikkotunteja saanut ensin
-            return this.viikonTunnit(a.id, paivaIso) - this.viikonTunnit(b.id, paivaIso);
+            return this.tyontekijalle(a.id).length - this.tyontekijalle(b.id).length;
         });
 
         return jarjestetyt.slice(0, maara);
-    },
-
-    // Työntekijän jo aikataulutetut tunnit kalenteriviikolla, johon viite-päivä kuuluu
-    viikonTunnit(tyontekijaId, viiteIso) {
-        const d = new Date(viiteIso);
-        const ma = new Date(d);
-        ma.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-        const su = new Date(ma);
-        su.setDate(ma.getDate() + 6);
-
-        return this.tyontekijalle(tyontekijaId)
-            .filter(v => {
-                const vd = new Date(v.paiva);
-                return vd >= ma && vd <= su;
-            })
-            .reduce((sum, v) => sum + this.kesto(v), 0);
     },
 
     olisiLiikaaPerakkain(tyontekijaId, paivaIso) {
