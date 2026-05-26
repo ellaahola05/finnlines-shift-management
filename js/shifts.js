@@ -305,9 +305,8 @@ const Shifts = {
     },
 
     luoAsiakaspalveluVuorot(paivaIso) {
-        const vuosi = parseInt(paivaIso.substring(0,4), 10);
-        const kk    = parseInt(paivaIso.substring(5,7), 10);
-        const saannot = Rules.kuukaudelle(vuosi, kk - 1);   // Rules käyttää JS-tyylin 0-11
+        // Rules.paivalle huomioi erikoisjärjestelyt → kuukausi-yliKirjoitukset → oletukset
+        const saannot = Rules.paivalle(paivaIso);
         const onKesa = saannot.onKesa;
         // Käytetään MAX-määrää: varmistaa että työntekijöiden viikkotuntiminimit täyttyvät
         const tarvitaan = saannot.asiakaspalveluMax;
@@ -327,9 +326,7 @@ const Shifts = {
     },
 
     luoLahtoselvitysVuorot(paivaIso, onViikonloppu) {
-        const vuosi = parseInt(paivaIso.substring(0,4), 10);
-        const kk    = parseInt(paivaIso.substring(5,7), 10);
-        const saannot = Rules.kuukaudelle(vuosi, kk - 1);
+        const saannot = Rules.paivalle(paivaIso);
         const onKesa = saannot.onKesa;
         // Käytetään MAX-määrää myös lähtöselvityksessä
         const tarvitaan = saannot.lahtoselvitysMax;
@@ -410,10 +407,8 @@ const Shifts = {
 
     olisiLiikaaPerakkain(tyontekijaId, paivaIso) {
         // Lasketaan montako peräkkäistä työpäivää tulisi jos lisätään tämä päivä.
-        // Maksimi haetaan Rules-moduulista (kuukausikohtainen, oletukset, fallback SAANNOT)
-        const vuosi = parseInt(paivaIso.substring(0,4), 10);
-        const kk    = parseInt(paivaIso.substring(5,7), 10);
-        const maksimi = Rules.kuukaudelle(vuosi, kk - 1).maxPerakkaiset;
+        // Maksimi haetaan Rules.paivalle:lta (erikois → kuukausi → oletus)
+        const maksimi = Rules.paivalle(paivaIso).maxPerakkaiset;
 
         const omat = this.tyontekijalle(tyontekijaId).map(v => v.paiva);
         const setti = new Set([...omat, paivaIso]);

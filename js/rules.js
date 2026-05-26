@@ -5,6 +5,7 @@
 const Rules = {
     AVAIN_OLETUS:    'rules-default',
     AVAIN_KUUKAUSI:  'rules-month-overrides',
+    AVAIN_ERIKOIS:   'rules-special-arrangements',
 
     // Lue pohja-asetukset. Jos käyttäjä on tallentanut omat, käytetään niitä;
     // muuten käytetään data.js:n SAANNOT-arvoja.
@@ -86,9 +87,87 @@ const Rules = {
         Storage.save(this.AVAIN_KUUKAUSI, all);
     },
 
-    // Palauta KAIKKI tehdasasetukset (poista myös oletukset-tallennus + kaikki kuukaudet)
+    // ===== ERIKOISJÄRJESTELYT =====
+    // Päivämääräväli (esim. Black Friday -viikko) joka YLIKIRJOITTAA kuukausi-ja oletusarvot.
+    // Tallennusmuoto: [{ id, nimi, alku, loppu, asiakaspalveluMin, asiakaspalveluMax,
+    //                    lahtoselvitysMin, lahtoselvitysMax, maxPerakkaiset }]
+
+    erikoiset() {
+        return Storage.load(this.AVAIN_ERIKOIS, []);
+    },
+
+    // Palauttaa erikoisjärjestelyn joka kattaa annetun päivän (tai null).
+    // Jos useita kattaa saman päivän → otetaan ensimmäinen (uusimmat tallennetaan ensin).
+    paivaErikoinen(paivaIso) {
+        return this.erikoiset().find(e =>
+            paivaIso >= e.alku && paivaIso <= e.loppu
+        ) || null;
+    },
+
+    // Lisää uusi erikoisjärjestely. Jos asetukset.id annettu, päivitetään olemassaolevaa.
+    tallennaErikois(asetukset) {
+        const lista = this.erikoiset();
+        const puhdas = {
+            id: asetukset.id || ('e_' + Date.now()),
+            nimi: asetukset.nimi || 'Erikoisjärjestely',
+            alku: asetukset.alku,
+            loppu: asetukset.loppu,
+        };
+        // Tallenna vain määritellyt numerokentät (tyhjä = käytetään alemman tason arvoa)
+        const kentat = ['asiakaspalveluMin', 'asiakaspalveluMax',
+                        'lahtoselvitysMin', 'lahtoselvitysMax', 'maxPerakkaiset'];
+        for (const k of kentat) {
+            const v = asetukset[k];
+            if (v !== undefined && v !== null && v !== '') {
+                puhdas[k] = Number(v);
+            }
+        }
+
+        const indeksi = lista.findIndex(e => e.id === puhdas.id);
+        if (indeksi >= 0) {
+            lista[indeksi] = puhdas;
+        } else {
+            lista.unshift(puhdas);   // uusimmat ensin → ensisijaisuus jos päivät menevät päällekkäin
+        }
+        Storage.save(this.AVAIN_ERIKOIS, lista);
+        return puhdas;
+    },
+
+    poistaErikois(id) {
+        const lista = this.erikoiset().filter(e => e.id !== id);
+        Storage.save(this.AVAIN_ERIKOIS, lista);
+    },
+
+    // ===== PÄIVÄKOHTAISET SÄÄNNÖT =====
+    // Palauttaa täysin yhdistetyt säännöt päivälle.
+    // Prioriteetti (vahvimmasta heikoimpaan):
+    //   1. Erikoisjärjestely (jos päivä on välillä)
+    //   2. Kuukausi-ylikirjoitus
+    //   3. Kesä/talvi-oletus (pohja-asetukset → fallback SAANNOT)
+    paivalle(paivaIso) {
+        const vuosi = parseInt(paivaIso.substring(0, 4), 10);
+        const kk    = parseInt(paivaIso.substring(5, 7), 10) - 1;   // 0-11
+        const kuukausiSaannot = this.kuukaudelle(vuosi, kk);
+        const erikois = this.paivaErikoinen(paivaIso);
+
+        if (!erikois) return { ...kuukausiSaannot, erikois: null };
+
+        // Yhdistä: erikois voittaa, mutta vain määritellyt kentät
+        return {
+            onKesa:           kuukausiSaannot.onKesa,
+            asiakaspalveluMin: erikois.asiakaspalveluMin ?? kuukausiSaannot.asiakaspalveluMin,
+            asiakaspalveluMax: erikois.asiakaspalveluMax ?? kuukausiSaannot.asiakaspalveluMax,
+            lahtoselvitysMin:  erikois.lahtoselvitysMin  ?? kuukausiSaannot.lahtoselvitysMin,
+            lahtoselvitysMax:  erikois.lahtoselvitysMax  ?? kuukausiSaannot.lahtoselvitysMax,
+            maxPerakkaiset:    erikois.maxPerakkaiset    ?? kuukausiSaannot.maxPerakkaiset,
+            erikois,            // viittaus erikoisjärjestelyyn, kalenterin UI:lle
+        };
+    },
+
+    // Palauta KAIKKI tehdasasetukset (poista myös oletukset-tallennus + kaikki kuukaudet + erikoiset)
     palautaOletuksiin() {
         Storage.save(this.AVAIN_OLETUS, null);
         Storage.save(this.AVAIN_KUUKAUSI, {});
+        Storage.save(this.AVAIN_ERIKOIS, []);
     },
 };

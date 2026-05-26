@@ -680,6 +680,7 @@ const ManagerView = {
 
         const oletukset = Rules.oletukset();
         const ylikirjoitukset = Rules.kuukausiYlikirjoitukset();
+        const erikoiset = Rules.erikoiset();
         const vuosi = this.saannotValittuVuosi;
 
         // Kuukausilista
@@ -797,6 +798,19 @@ const ManagerView = {
                     ${kuukausiRivit.join('')}
                 </ul>
             </section>
+
+            <section class="saannot-osio">
+                <h2>🎉 Erikoisjärjestelyt</h2>
+                <p class="muted">Päivämääräväli (esim. Black Friday -viikko) jossa tarvitaan eri määrä työntekijöitä. Vahvempi kuin kuukausi- tai kesä/talvi-asetukset.</p>
+
+                <ul class="erikois-lista">
+                    ${erikoiset.length === 0
+                        ? '<li class="tyhja">Ei vielä erikoisjärjestelyitä.</li>'
+                        : erikoiset.map(e => this.erikoisRiviHtml(e)).join('')}
+                </ul>
+
+                <button id="lisaa-erikois" class="ensisijainen" style="margin-top: 14px;">+ Lisää erikoisjärjestely</button>
+            </section>
         `;
 
         this.kiinnitaYhteisetTapahtumat(container);
@@ -867,6 +881,181 @@ const ManagerView = {
                 }
             });
         });
+
+        // Erikoisjärjestelyt — lisää uusi
+        document.getElementById('lisaa-erikois').addEventListener('click', () => {
+            this.avaaErikoisModaali(null, container);
+        });
+
+        // Erikoisjärjestelyt — muokkaa olemassaolevaa
+        container.querySelectorAll('.muokkaa-erikois').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.avaaErikoisModaali(btn.dataset.id, container);
+            });
+        });
+
+        // Erikoisjärjestelyt — poista
+        container.querySelectorAll('.poista-erikois').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const e = Rules.erikoiset().find(x => x.id === btn.dataset.id);
+                if (e && confirm(`Poistetaanko erikoisjärjestely "${e.nimi}"?`)) {
+                    Rules.poistaErikois(e.id);
+                    this.render(container);
+                }
+            });
+        });
+    },
+
+    // Yhden erikoisjärjestelyn rivi näkymässä
+    erikoisRiviHtml(e) {
+        const arvot = [];
+        if (e.asiakaspalveluMin !== undefined || e.asiakaspalveluMax !== undefined) {
+            const min = e.asiakaspalveluMin !== undefined ? e.asiakaspalveluMin : '?';
+            const max = e.asiakaspalveluMax !== undefined ? e.asiakaspalveluMax : '?';
+            arvot.push(`👥 ${min}–${max}`);
+        }
+        if (e.lahtoselvitysMin !== undefined || e.lahtoselvitysMax !== undefined) {
+            const min = e.lahtoselvitysMin !== undefined ? e.lahtoselvitysMin : '?';
+            const max = e.lahtoselvitysMax !== undefined ? e.lahtoselvitysMax : '?';
+            arvot.push(`🛂 ${min}–${max}`);
+        }
+        if (e.maxPerakkaiset !== undefined) {
+            arvot.push(`📅 max ${e.maxPerakkaiset}`);
+        }
+        const arvotTeksti = arvot.length ? arvot.join(' · ') : '<em class="muted">ei muutoksia (tarkasta arvot)</em>';
+
+        return `
+            <li class="erikois-rivi">
+                <div class="erikois-otsikko">
+                    <strong>🎉 ${e.nimi}</strong>
+                    <span class="erikois-pvm">${this.muotoilePvm(e.alku)} – ${this.muotoilePvm(e.loppu)}</span>
+                </div>
+                <div class="erikois-arvot">${arvotTeksti}</div>
+                <div class="erikois-napit">
+                    <button class="muokkaa-erikois" data-id="${e.id}">Muokkaa</button>
+                    <button class="poista-erikois hylkaa" data-id="${e.id}">Poista</button>
+                </div>
+            </li>
+        `;
+    },
+
+    // Erikoisjärjestelyn modaali (uusi tai olemassaoleva).
+    // erikoisId = null → uusi; muuten muokataan olemassaolevaa
+    avaaErikoisModaali(erikoisId, kalenteriContainer) {
+        const olemassa = erikoisId
+            ? Rules.erikoiset().find(e => e.id === erikoisId)
+            : null;
+        const e = olemassa || { nimi: '', alku: '', loppu: '' };
+
+        // Esimerkki-oletukset näytetään placeholderissa: nykyiset säännöt alkupäivänä
+        const naytetaanOletukset = (e.alku)
+            ? Rules.paivalle(e.alku)
+            : Rules.kuukaudelle(this.nykyinenVuosi, this.nykyinenKuukausi);
+
+        const modaali = document.createElement('div');
+        modaali.className = 'modaali-tausta';
+        modaali.innerHTML = `
+            <div class="modaali" style="max-width: 560px;">
+                <div class="modaali-header">
+                    <h2>${olemassa ? 'Muokkaa erikoisjärjestelyä' : 'Uusi erikoisjärjestely'}</h2>
+                    <button class="sulje-modaali" id="erikois-sulje">✕</button>
+                </div>
+                <p class="muted">Esim. "Black Friday", "Joulun ruuhka", "Lipputarjous-viikko". Tämä ylikirjoittaa kuukausi- ja kausi-asetukset annetuilla päivillä.</p>
+
+                <form id="erikois-lomake" class="muokkaa-lomake" style="grid-template-columns: 1fr 1fr;">
+                    <label style="grid-column: 1 / -1;">Nimi
+                        <input type="text" name="nimi" required maxlength="40"
+                            placeholder="esim. Black Friday"
+                            value="${this.htmlEsc(e.nimi || '')}">
+                    </label>
+                    <label>Alkupäivä
+                        <input type="date" name="alku" required value="${e.alku || ''}">
+                    </label>
+                    <label>Loppupäivä
+                        <input type="date" name="loppu" required value="${e.loppu || ''}">
+                    </label>
+
+                    <label>Asiakaspalvelijoita min
+                        <input type="number" name="asiakaspalveluMin" min="0" max="20"
+                            value="${e.asiakaspalveluMin ?? ''}"
+                            placeholder="oletus: ${naytetaanOletukset.asiakaspalveluMin}">
+                    </label>
+                    <label>Asiakaspalvelijoita max
+                        <input type="number" name="asiakaspalveluMax" min="0" max="20"
+                            value="${e.asiakaspalveluMax ?? ''}"
+                            placeholder="oletus: ${naytetaanOletukset.asiakaspalveluMax}">
+                    </label>
+                    <label>Lähtöselvittäjiä min
+                        <input type="number" name="lahtoselvitysMin" min="0" max="10"
+                            value="${e.lahtoselvitysMin ?? ''}"
+                            placeholder="oletus: ${naytetaanOletukset.lahtoselvitysMin}">
+                    </label>
+                    <label>Lähtöselvittäjiä max
+                        <input type="number" name="lahtoselvitysMax" min="0" max="10"
+                            value="${e.lahtoselvitysMax ?? ''}"
+                            placeholder="oletus: ${naytetaanOletukset.lahtoselvitysMax}">
+                    </label>
+                    <label style="grid-column: 1 / -1;">Max peräkkäiset työpäivät
+                        <input type="number" name="maxPerakkaiset" min="1" max="14"
+                            value="${e.maxPerakkaiset ?? ''}"
+                            placeholder="oletus: ${naytetaanOletukset.maxPerakkaiset}">
+                    </label>
+
+                    <div class="muokkaa-napit">
+                        <button type="button" id="erikois-peruuta">Peruuta</button>
+                        <button type="submit" class="ensisijainen">💾 Tallenna</button>
+                    </div>
+                </form>
+            </div>
+        `;
+        document.body.appendChild(modaali);
+
+        const sulje = () => modaali.remove();
+        modaali.addEventListener('click', (ev) => { if (ev.target === modaali) sulje(); });
+        document.getElementById('erikois-sulje').addEventListener('click', sulje);
+        document.getElementById('erikois-peruuta').addEventListener('click', sulje);
+
+        document.getElementById('erikois-lomake').addEventListener('submit', (ev) => {
+            ev.preventDefault();
+            const f = ev.target;
+            const alku = f.alku.value;
+            const loppu = f.loppu.value;
+
+            if (alku > loppu) {
+                alert('Alkupäivä ei voi olla myöhemmin kuin loppupäivä.');
+                return;
+            }
+
+            // Vähintään yksi arvo täytyy olla annettu, muuten erikoisjärjestely ei tee mitään
+            const arvoja = ['asiakaspalveluMin','asiakaspalveluMax','lahtoselvitysMin','lahtoselvitysMax','maxPerakkaiset']
+                .some(k => f[k].value !== '');
+            if (!arvoja) {
+                alert('Aseta vähintään yksi numeerinen arvo (esim. asiakaspalvelijoiden max).');
+                return;
+            }
+
+            Rules.tallennaErikois({
+                id: erikoisId,
+                nimi: f.nimi.value.trim() || 'Erikoisjärjestely',
+                alku,
+                loppu,
+                asiakaspalveluMin: f.asiakaspalveluMin.value,
+                asiakaspalveluMax: f.asiakaspalveluMax.value,
+                lahtoselvitysMin:  f.lahtoselvitysMin.value,
+                lahtoselvitysMax:  f.lahtoselvitysMax.value,
+                maxPerakkaiset:    f.maxPerakkaiset.value,
+            });
+
+            sulje();
+            this.render(kalenteriContainer);
+        });
+    },
+
+    // Pieni HTML-escapeapuri (käytetään input-arvoissa)
+    htmlEsc(s) {
+        return String(s).replace(/[&<>"']/g, (m) => ({
+            '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+        }[m]));
     },
 
     // Yhden kuukauden ylikirjoituksen muokkaus
@@ -1100,16 +1289,22 @@ const ManagerView = {
             return `<ul class="vuoro-ryhma rooli-${rooli}">${rivit}</ul>`;
         }).join('');
 
+        const erikois = Rules.paivaErikoinen(iso);
+
         const luokat = ['paiva-solu', 'klikattava'];
         if (!onTassaKuussa) luokat.push('eri-kuukausi');
         if (onViikonloppu) luokat.push('viikonloppu');
         if (onPoikkeus) luokat.push('poikkeus');
+        if (erikois && onTassaKuussa) luokat.push('erikois');
 
         const poikkeusMerkki = onPoikkeus ? ' ⚠️' : '';
+        const erikoisMerkki = (erikois && onTassaKuussa)
+            ? `<span class="erikois-piste" title="🎉 ${this.htmlEsc(erikois.nimi)}">🎉</span>`
+            : '';
 
         return `
-            <div class="${luokat.join(' ')}" data-paiva="${iso}" title="Klikkaa muokataksesi">
-                <div class="paiva-numero">${d.getDate()}${poikkeusMerkki}</div>
+            <div class="${luokat.join(' ')}" data-paiva="${iso}" title="Klikkaa muokataksesi${erikois ? ' — ' + erikois.nimi : ''}">
+                <div class="paiva-numero">${d.getDate()}${poikkeusMerkki}${erikoisMerkki}</div>
                 ${ryhmatHtml}
             </div>
         `;
